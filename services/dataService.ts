@@ -1,115 +1,128 @@
-import { TextData, Skill, Team, TestContext, ProgressDataPoint, ChatChannel, Resource, ChatMessage, Specialization } from '../types';
-import { initialTexts, initialSkills, initialTeams, initialTestContexts, initialProgressData, initialChatChannels, initialResources, initialSpecializations } from '../data/courseData';
 
-// Keys for localStorage
-const TEXTS_STORAGE_KEY = 'platformTexts';
-const SKILLS_STORAGE_KEY = 'platformSkills';
-const TEAMS_STORAGE_KEY = 'platformTeams';
-const TEST_CONTEXTS_STORAGE_KEY = 'platformTestContexts';
-const CHAT_CHANNELS_STORAGE_KEY = 'platformChatChannels';
-const RESOURCES_STORAGE_KEY = 'platformResources';
-const PROGRESS_DATA_STORAGE_KEY = 'platformProgressData';
-const CHAT_HISTORY_STORAGE_KEY_PREFIX = 'platformChatHistory_';
-const COMPLETED_SKILLS_STORAGE_KEY = 'platformCompletedSkills';
-const SPECIALIZATIONS_STORAGE_KEY = 'platformSpecializations';
+import { TextData, Skill, Team, TestContext, ProgressDataPoint, ChatChannel, Resource, Specialization } from '../types';
+import { supabase } from './supabaseClient';
+import * as initialData from '../data/courseData';
 
+// Helper to check if supabase is ready
+const isSupabaseReady = () => !!supabase;
 
-// Generic getter function to read from localStorage or initialize it
-function getDataFromStorage<T>(key: string, initialData: T): T {
+// المهارات (Skills)
+export const getSkills = async (): Promise<Skill[]> => {
+    if (!isSupabaseReady()) return initialData.initialSkills;
+    const { data, error } = await supabase!.from('skills').select('*').order('id', { ascending: true });
+    if (error) throw error;
+    return data || [];
+};
+
+export const saveSkills = async (skills: Skill[]) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('skills').upsert(skills);
+    if (error) throw error;
+};
+
+// النصوص (Texts)
+export const getTexts = async (): Promise<TextData[]> => {
+    if (!isSupabaseReady()) return initialData.initialTexts;
+    const { data, error } = await supabase!.from('texts').select('*');
+    if (error) throw error;
+    return data || [];
+};
+
+export const saveTexts = async (texts: TextData[]) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('texts').upsert(texts);
+    if (error) throw error;
+};
+
+// الفرق (Teams)
+export const getTeams = async (): Promise<Team[]> => {
+    if (!isSupabaseReady()) return initialData.initialTeams;
+    const { data, error } = await supabase!.from('teams').select('*');
+    if (error) throw error;
+    return data || [];
+};
+
+export const saveTeams = async (teams: Team[]) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('teams').upsert(teams);
+    if (error) throw error;
+};
+
+// المصادر (Resources)
+export const getResources = async (): Promise<Resource[]> => {
+    if (!isSupabaseReady()) return initialData.initialResources;
+    const { data, error } = await supabase!.from('resources').select('*');
+    if (error) throw error;
+    return data || [];
+};
+
+export const saveResources = async (resources: Resource[]) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('resources').upsert(resources);
+    if (error) throw error;
+};
+
+// التخصصات (Specializations)
+export const getSpecializations = async (): Promise<Specialization[]> => {
+    if (!isSupabaseReady()) return initialData.initialSpecializations;
+    const { data, error } = await supabase!.from('specializations').select('*');
+    if (error) throw error;
+    return data || [];
+};
+
+export const saveSpecializations = async (specs: Specialization[]) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('specializations').upsert(specs);
+    if (error) throw error;
+};
+
+// قنوات الدردشة
+export const getChatChannels = async (): Promise<ChatChannel[]> => {
+    if (!isSupabaseReady()) return initialData.initialChatChannels;
+    const { data, error } = await supabase!.from('chat_channels').select('*');
+    if (error) throw error;
+    return data || [];
+};
+
+export const saveChatChannels = async (channels: ChatChannel[]) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('chat_channels').upsert(channels);
+    if (error) throw error;
+};
+
+// المهارات المكتملة
+export const getCompletedSkills = async (userId: string): Promise<number[]> => {
+    if (!isSupabaseReady()) return [];
+    const { data, error } = await supabase!.from('completed_skills').select('skill_id').eq('user_id', userId);
+    if (error) throw error;
+    return data.map(item => item.skill_id);
+};
+
+export const saveCompletedSkill = async (userId: string, skillId: number) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('completed_skills').insert({ user_id: userId, skill_id: skillId });
+    if (error) throw error;
+};
+
+// بيانات التقدم
+export const getProgressData = async (): Promise<ProgressDataPoint[]> => {
+    if (!isSupabaseReady()) return initialData.initialProgressData;
+    const { data, error } = await supabase!.from('progress_data').select('*').order('id', { ascending: true });
+    if (error) throw error;
+    return data || [];
+};
+
+// FIX: Added getChatHistory to retrieve persisted chat messages from localStorage.
+export const getChatHistory = (channelId: string): any[] => {
+    const saved = localStorage.getItem(`platformChatHistory_${channelId}`);
+    return saved ? JSON.parse(saved) : [];
+};
+
+// FIX: Added saveChatHistory to persist chat messages to localStorage.
+export const saveChatHistory = (channelId: string, history: any[]) => {
     try {
-        const storedData = localStorage.getItem(key);
-        if (storedData) {
-            let parsedData = JSON.parse(storedData);
-
-            // Migration logic for chat channels to ensure new fields are added to old saved data
-            if (key === CHAT_CHANNELS_STORAGE_KEY && Array.isArray(parsedData) && Array.isArray(initialData)) {
-                const initialChannelsMap = new Map((initialData as any[]).map(c => [c.id, c]));
-                parsedData = (parsedData as any[]).map(storedChannel => {
-                    const initialChannel = initialChannelsMap.get(storedChannel.id);
-                    if (initialChannel) {
-                        // Merge initial data as defaults for any missing properties
-                        return { ...initialChannel, ...storedChannel };
-                    }
-                    return storedChannel;
-                });
-            }
-            
-            return parsedData as T;
-        }
-        // If no data in storage, initialize with default and save it
-        localStorage.setItem(key, JSON.stringify(initialData));
-        return initialData;
-    } catch (error) {
-        console.error(`Failed to parse ${key} from localStorage`, error);
-        return initialData;
+        localStorage.setItem(`platformChatHistory_${channelId}`, JSON.stringify(history));
+    } catch (e) {
+        throw new Error('global.storageFullError');
     }
-}
-
-// Generic setter function to save data to localStorage
-function saveDataToStorage<T>(key: string, data: T) {
-    try {
-        localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-        console.error(`Failed to save ${key} to localStorage`, error);
-        if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-            throw new Error('global.storageFullError');
-        }
-        throw error;
-    }
-}
-
-// Texts
-export const getTexts = (): TextData[] => getDataFromStorage(TEXTS_STORAGE_KEY, initialTexts);
-export const saveTexts = (texts: TextData[]) => saveDataToStorage(TEXTS_STORAGE_KEY, texts);
-
-// Skills
-export const getSkills = (): Skill[] => getDataFromStorage(SKILLS_STORAGE_KEY, initialSkills);
-export const saveSkills = (skills: Skill[]) => saveDataToStorage(SKILLS_STORAGE_KEY, skills);
-
-// Completed Skills
-export const getCompletedSkills = (): number[] => getDataFromStorage(COMPLETED_SKILLS_STORAGE_KEY, []);
-export const saveCompletedSkills = (skillIds: number[]) => saveDataToStorage(COMPLETED_SKILLS_STORAGE_KEY, skillIds);
-
-// Specializations
-export const getSpecializations = (): Specialization[] => getDataFromStorage(SPECIALIZATIONS_STORAGE_KEY, initialSpecializations);
-export const saveSpecializations = (specializations: Specialization[]) => saveDataToStorage(SPECIALIZATIONS_STORAGE_KEY, specializations);
-
-// Teams
-export const getTeams = (): Team[] => getDataFromStorage(TEAMS_STORAGE_KEY, initialTeams);
-export const saveTeams = (teams: Team[]) => saveDataToStorage(TEAMS_STORAGE_KEY, teams);
-
-// Test Contexts
-export const getTestContexts = (): TestContext[] => getDataFromStorage(TEST_CONTEXTS_STORAGE_KEY, initialTestContexts);
-export const saveTestContexts = (testContexts: TestContext[]) => saveDataToStorage(TEST_CONTEXTS_STORAGE_KEY, testContexts);
-
-// Chat Channels
-export const getChatChannels = (): ChatChannel[] => getDataFromStorage(CHAT_CHANNELS_STORAGE_KEY, initialChatChannels);
-export const saveChatChannels = (channels: ChatChannel[]) => saveDataToStorage(CHAT_CHANNELS_STORAGE_KEY, channels);
-
-// Resources
-export const getResources = (): Resource[] => getDataFromStorage(RESOURCES_STORAGE_KEY, initialResources);
-export const saveResources = (resources: Resource[]) => saveDataToStorage(RESOURCES_STORAGE_KEY, resources);
-
-// Progress Data
-export const getProgressData = (): ProgressDataPoint[] => getDataFromStorage(PROGRESS_DATA_STORAGE_KEY, initialProgressData);
-export const saveProgressData = (data: ProgressDataPoint[]) => saveDataToStorage(PROGRESS_DATA_STORAGE_KEY, data);
-
-// Chat History
-export const getChatHistory = (channelId: string): ChatMessage[] | null => {
-    const key = `${CHAT_HISTORY_STORAGE_KEY_PREFIX}${channelId}`;
-    try {
-        const storedData = localStorage.getItem(key);
-        if (storedData) {
-            return JSON.parse(storedData);
-        }
-        return null; // Return null if no history exists
-    } catch (error) {
-        console.error(`Failed to parse chat history for ${channelId}`, error);
-        return null;
-    }
-}
-
-export const saveChatHistory = (channelId: string, messages: ChatMessage[]) => {
-    const key = `${CHAT_HISTORY_STORAGE_KEY_PREFIX}${channelId}`;
-    saveDataToStorage(key, messages);
-}
+};

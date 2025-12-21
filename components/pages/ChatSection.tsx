@@ -3,9 +3,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import { ChatMessage, User, ChatChannel } from '../../types';
-import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, PencilIcon } from '../common/Icons';
+import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, PencilIcon, SpeakerWaveIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
 import { GoogleGenAI, Chat } from '@google/genai';
+import { textToSpeech, decodeBase64, decodeAudioData } from '../../services/geminiService';
 import Spinner from '../common/Spinner';
 import { getChatHistory, saveChatHistory } from '../../services/dataService';
 
@@ -22,7 +23,7 @@ interface ChatSettingsModalProps {
 const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({ isOpen, onClose, channel, onSave, onReset }) => {
     const { t, locale } = useI18n();
     const [localChannel, setLocalChannel] = useState(channel);
-    const availableModels = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
+    const availableModels = ['gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-flash-lite-latest'];
 
     useEffect(() => {
         setLocalChannel(channel);
@@ -72,7 +73,6 @@ const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({ isOpen, onClose, 
                             onChange={(e) => setLocalChannel(prev => ({ ...prev, systemPrompt: { ...prev.systemPrompt, [locale]: e.target.value } }))}
                             className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600 font-mono"
                         />
-                        <p className="mt-2 text-xs text-slate-500">{t('chat.systemPromptInfo')}</p>
                     </div>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 flex justify-between items-center rounded-b-xl">
@@ -98,12 +98,12 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
     const [activeChannelId, setActiveChannelId] = useState<string | null>(chatChannels.length > 0 ? chatChannels[0].id : null);
     const activeChannel = chatChannels.find(c => c.id === activeChannelId) || null;
     
-    // AI Chat State
     const [aiMessages, setAiMessages] = useState<ChatMessage[]>([]);
     const [isAiThinking, setIsAiThinking] = useState(false);
+    const [speakingId, setSpeakingId] = useState<number | null>(null);
     const chatSession = useRef<Chat | null>(null);
-    const [storageErrorShown, setStorageErrorShown] = useState(false);
-    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -115,51 +115,70 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
     useEffect(() => {
         scrollToBottom();
     }, [aiMessages, isAiThinking]);
-    
-    // Persist chat history to localStorage
-    useEffect(() => {
-        if (activeChannel && aiMessages.length > 0) {
-            try {
-                saveChatHistory(activeChannel.id, aiMessages);
-            } catch (e: any) {
-                if (e.message === 'global.storageFullError' && !storageErrorShown) {
-                    alert(t('global.storageFullErrorChat'));
-                    setStorageErrorShown(true);
-                }
-            }
-        }
-    }, [aiMessages, activeChannel, storageErrorShown, t]);
 
-    const initializeChannel = useCallback((channel: ChatChannel) => {
-        if (!process.env.API_KEY) {
-            console.error("API_KEY is not set in environment variables.");
+    const stopAudio = () => {
+        if (currentSourceRef.current) {
+            currentSourceRef.current.stop();
+            currentSourceRef.current = null;
+        }
+        setSpeakingId(null);
+    };
+
+    const handleListen = async (message: ChatMessage) => {
+        if (speakingId === message.id) {
+            stopAudio();
             return;
         }
 
+        stopAudio();
+        setSpeakingId(message.id);
+        
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const base64Audio = await textToSpeech(message.text);
+            if (!audioContextRef.current) {
+                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+            const audioData = decodeBase64(base64Audio);
+            const audioBuffer = await decodeAudioData(audioData, audioContextRef.current);
+            
+            const source = audioContextRef.current.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContextRef.current.destination);
+            source.onended = () => setSpeakingId(null);
+            source.start();
+            currentSourceRef.current = source;
+        } catch (err) {
+            console.error("Audio error:", err);
+            setSpeakingId(null);
+        }
+    };
+
+    const initializeChannel = useCallback((channel: ChatChannel) => {
+        const apiKey = process.env.API_KEY;
+        if (!apiKey) return;
+
+        try {
+            const ai = new GoogleGenAI({ apiKey });
             chatSession.current = ai.chats.create({
-                model: channel.model || 'gemini-2.5-flash',
-                config: {
-                    systemInstruction: channel.systemPrompt[locale],
-                },
+                model: channel.model || 'gemini-3-flash-preview',
+                config: { systemInstruction: channel.systemPrompt[locale] },
             });
         } catch (error) {
-             console.error("Failed to initialize AI client:", error);
+             console.error("AI Init Failed:", error);
         }
         
         const savedHistory = getChatHistory(channel.id);
         if (savedHistory && savedHistory.length > 0) {
             setAiMessages(savedHistory);
         } else {
-             const initialAiMessage: ChatMessage = {
+             setAiMessages([{
                 id: 0,
                 user: t('chat.aiName'),
                 avatar: AI_AVATAR_URL,
                 text: t('chat.aiWelcome'),
                 timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-            };
-            setAiMessages([initialAiMessage]);
+                hasAudio: true
+            }]);
         }
     }, [locale, t]);
 
@@ -167,35 +186,14 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         if (activeChannel) {
             initializeChannel(activeChannel);
         }
+        return () => stopAudio();
     }, [activeChannel, initializeChannel]);
-
-    const handleChannelChange = (channel: ChatChannel) => {
-        setActiveChannelId(channel.id);
-    };
-
-    const handleSaveSettings = (updatedChannel: ChatChannel) => {
-        setChatChannels(prevChannels =>
-            prevChannels.map(c => c.id === updatedChannel.id ? updatedChannel : c)
-        );
-        setIsSettingsModalOpen(false);
-    };
-
-    const handleResetSettings = (channelToReset: ChatChannel) => {
-        const resetChannel = {
-            ...channelToReset,
-            systemPrompt: channelToReset.defaultSystemPrompt,
-        };
-         setChatChannels(prevChannels =>
-            prevChannels.map(c => c.id === resetChannel.id ? resetChannel : c)
-        );
-    };
-
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (newMessage.trim() === '' || !user || !activeChannel) return;
         
-        const userMessage: ChatMessage = {
+        const userMsg: ChatMessage = {
             id: Date.now(),
             user: user.displayName,
             avatar: user.photoURL,
@@ -203,38 +201,23 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
             timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
         };
 
-        const messageToSend = newMessage;
-        setAiMessages(prev => [...prev, userMessage]);
+        setAiMessages(prev => [...prev, userMsg]);
         setNewMessage('');
         setIsAiThinking(true);
         
         try {
-            if (!chatSession.current) {
-                 if (!process.env.API_KEY) {
-                     throw new Error("API Key is missing. Please configure the application.");
-                 }
-                 throw new Error("Chat session not initialized.");
-            }
-            const response = await chatSession.current.sendMessage({ message: messageToSend });
-            
-            const aiResponse: ChatMessage = {
+            const response = await chatSession.current!.sendMessage({ message: userMsg.text });
+            const aiMsg: ChatMessage = {
                 id: Date.now() + 1,
                 user: t('chat.aiName'),
                 avatar: AI_AVATAR_URL,
                 text: response.text,
                 timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+                hasAudio: true
             };
-            setAiMessages(prev => [...prev, aiResponse]);
-        } catch (error) {
-            console.error("Error sending message to AI:", error);
-            const errorResponse: ChatMessage = {
-                    id: Date.now() + 1,
-                user: t('chat.aiName'),
-                avatar: AI_AVATAR_URL,
-                text: t('chat.aiError'),
-                timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-            };
-            setAiMessages(prev => [...prev, errorResponse]);
+            setAiMessages(prev => [...prev, aiMsg]);
+        } catch (error: any) {
+            console.error("Chat error:", error);
         } finally {
             setIsAiThinking(false);
         }
@@ -244,66 +227,53 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         <div>
             <h2 className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">{t('chat.title')}</h2>
             <Card className="flex flex-col md:flex-row h-[calc(100vh-200px)]">
-                {/* Channels */}
                 <div className="w-full md:w-1/4 border-b md:border-b-0 md:border-e border-slate-200 dark:border-slate-700 p-4">
                     <h3 className="font-bold mb-4">{t('chat.channels')}</h3>
                     <ul className="flex flex-row md:flex-col gap-1">
-                       {chatChannels.map(channel => {
-                           const isCustomized = JSON.stringify(channel.systemPrompt) !== JSON.stringify(channel.defaultSystemPrompt);
-                           return (
-                                <ChannelButton 
-                                    key={channel.id}
-                                    name={channel.name[locale]} 
-                                    channelId={channel.id} 
-                                    activeChannelId={activeChannel?.id || ''} 
-                                    onClick={() => handleChannelChange(channel)} 
-                                    icon={iconMap[channel.iconName] || SparklesIcon}
-                                    isCustomized={isCustomized}
-                                />
-                           );
-                       })}
+                       {chatChannels.map(channel => (
+                            <ChannelButton 
+                                key={channel.id}
+                                name={channel.name[locale]} 
+                                activeChannelId={activeChannel?.id || ''} 
+                                channelId={channel.id}
+                                onClick={() => setActiveChannelId(channel.id)} 
+                                icon={iconMap[channel.iconName] || SparklesIcon}
+                            />
+                       ))}
                     </ul>
                 </div>
 
-                {/* Chat Area */}
                 <div className="flex-1 flex flex-col">
-                     <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-700">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white">{activeChannel?.name[locale]}</h3>
-                        {user && activeChannel && (
-                            <Button variant="secondary" size="sm" onClick={() => setIsSettingsModalOpen(true)} className="!p-2">
-                                <Cog6ToothIcon className="h-5 w-5" />
-                            </Button>
-                        )}
+                        <Button variant="secondary" size="sm" onClick={() => stopAudio()} className="!p-2">
+                            <Cog6ToothIcon className="h-5 w-5" />
+                        </Button>
                     </div>
-                    <div className="flex-1 overflow-y-auto mb-4 p-4 ps-2">
+                    <div className="flex-1 overflow-y-auto p-4">
                         {aiMessages.map(msg => (
                             <div key={msg.id} className={`flex items-start mb-4 ${msg.user === user?.displayName ? 'justify-end' : ''}`}>
                                 {msg.user !== user?.displayName && <img src={msg.avatar} alt={msg.user} className="w-10 h-10 rounded-full me-3 object-cover" />}
-                                <div className={`max-w-xs lg:max-w-md p-3 rounded-lg ${msg.user === user?.displayName ? 'bg-primary-500 text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                <div className={`group relative max-w-xs lg:max-w-md p-3 rounded-lg ${msg.user === user?.displayName ? 'bg-primary-500 text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
                                     <div className="flex items-center justify-between">
                                         <p className="font-bold text-sm">{msg.user}</p>
                                         <p className="text-xs opacity-70 ms-2">{msg.timestamp}</p>
                                     </div>
                                     <p className="mt-1 whitespace-pre-wrap">{msg.text}</p>
+                                    {msg.hasAudio && (
+                                        <button 
+                                            onClick={() => handleListen(msg)}
+                                            className={`mt-2 flex items-center gap-1 text-xs transition-colors ${msg.user === user?.displayName ? 'text-primary-100 hover:text-white' : 'text-primary-600 hover:text-primary-700'} ${speakingId === msg.id ? 'animate-pulse font-bold' : ''}`}
+                                        >
+                                            <SpeakerWaveIcon className="h-4 w-4" />
+                                            {speakingId === msg.id ? t('chat.listening') : t('chat.listen')}
+                                        </button>
+                                    )}
                                 </div>
                                 {msg.user === user?.displayName && <img src={msg.avatar} alt={msg.user} className="w-10 h-10 rounded-full ms-3 object-cover" />}
                             </div>
                         ))}
-                        {isAiThinking && (
-                             <div className="flex items-start mb-4">
-                                <img src={AI_AVATAR_URL} alt={t('chat.aiName')} className="w-10 h-10 rounded-full me-3" />
-                                <div className="max-w-xs lg:max-w-md p-3 rounded-lg bg-slate-200 dark:bg-slate-700">
-                                    <div className="flex items-center">
-                                        <p className="font-bold text-sm">{t('chat.aiName')}</p>
-                                    </div>
-                                    <div className="mt-2 flex items-center space-x-2 rtl:space-x-reverse">
-                                        <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                        <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                        <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {isAiThinking && <Spinner size="sm" />}
                         <div ref={messagesEndRef} />
                     </div>
                     
@@ -316,12 +286,11 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     placeholder={t('chat.messagePlaceholder')}
                                     className="flex-1 p-2 border border-slate-300 rounded-md dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-primary-500"
-                                    disabled={isAiThinking}
                                 />
-                                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50" disabled={isAiThinking}>{t('chat.send')}</button>
+                                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">{t('chat.send')}</button>
                             </form>
                         ) : (
-                            <div className="p-4 text-center text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/50 rounded-md">
+                            <div className="p-4 text-center bg-slate-100 dark:bg-slate-900/50 rounded-md">
                                 <LockClosedIcon className="h-6 w-6 mx-auto mb-2" />
                                 <p>{t('chat.loginPrompt')}</p>
                             </div>
@@ -329,43 +298,21 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                     </div>
                 </div>
             </Card>
-            {isSettingsModalOpen && activeChannel && (
-                <ChatSettingsModal
-                    isOpen={isSettingsModalOpen}
-                    onClose={() => setIsSettingsModalOpen(false)}
-                    channel={activeChannel}
-                    onSave={handleSaveSettings}
-                    onReset={handleResetSettings}
-                />
-            )}
         </div>
     );
 };
 
-interface ChannelButtonProps {
-    name: string;
-    channelId: string;
-    activeChannelId: string;
-    onClick: () => void;
-    icon: React.ElementType;
-    isCustomized: boolean;
-}
-const ChannelButton: React.FC<ChannelButtonProps> = ({ name, channelId, activeChannelId, onClick, icon: Icon, isCustomized }) => {
-    const { t } = useI18n();
-    return (
-        <li className="flex-1 md:flex-none">
-            <button
-                onClick={onClick}
-                className={`w-full text-center md:text-start p-2 rounded-md text-sm md:text-base flex items-center gap-2 ${activeChannelId === channelId ? 'bg-primary-100 dark:bg-slate-700 font-bold text-primary-700 dark:text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-600'}`}
-            >
-                <Icon className="h-5 w-5" />
-                <span className="flex-grow">{name}</span>
-                {isCustomized && (
-                    <PencilIcon className="h-3 w-3 text-slate-500 flex-shrink-0" title={t('chat.customizedPrompt')} />
-                )}
-            </button>
-        </li>
-    );
-};
+interface ChannelButtonProps { name: string; channelId: string; activeChannelId: string; onClick: () => void; icon: React.ElementType; }
+const ChannelButton: React.FC<ChannelButtonProps> = ({ name, channelId, activeChannelId, onClick, icon: Icon }) => (
+    <li className="flex-1 md:flex-none">
+        <button
+            onClick={onClick}
+            className={`w-full text-center md:text-start p-2 rounded-md text-sm md:text-base flex items-center gap-2 ${activeChannelId === channelId ? 'bg-primary-100 dark:bg-slate-700 font-bold text-primary-700 dark:text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-600'}`}
+        >
+            <Icon className="h-5 w-5" />
+            <span className="flex-grow">{name}</span>
+        </button>
+    </li>
+);
 
 export default ChatSection;

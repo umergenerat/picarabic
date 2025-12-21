@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export type MultilingualString = {
@@ -60,13 +61,14 @@ export interface ChatMessage {
     avatar: string;
     text: string;
     timestamp: string;
+    hasAudio?: boolean;
 }
 
 export interface ChatChannel {
     id: string;
     name: MultilingualString;
     defaultSystemPrompt: MultilingualString;
-    systemPrompt: MultilingualString; // The current, potentially user-edited prompt
+    systemPrompt: MultilingualString;
     iconName: string;
     model: string;
 }
@@ -78,8 +80,6 @@ export interface Resource {
     link: string;
 }
 
-
-// Admin Panel Types
 export type UserRole = 'متدرب' | 'أستاذ' | 'مدير';
 
 export interface PlatformUser {
@@ -94,7 +94,6 @@ export interface PlatformUser {
     mustChangePassword?: boolean;
 }
 
-
 export interface Team {
     id: number;
     name: MultilingualString;
@@ -104,7 +103,7 @@ export interface Team {
     presentationData?: string | null;
     videoSummaryUrl: string | null;
     presentationTitle: MultilingualString;
-    dueDate: string; // YYYY-MM-DD
+    dueDate: string;
     teamLeader: string;
 }
 
@@ -121,7 +120,6 @@ export interface ProgressDataPoint {
     testScores: number;
 }
 
-// Navigation Types
 export type Page = 'home' | 'texts' | 'skills' | 'presentations' | 'tests' | 'chat' | 'resources' | 'dashboard' | 'admin';
 
 export interface NavItem {

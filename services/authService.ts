@@ -1,173 +1,116 @@
+
 import { User, PlatformUser } from '../types';
+import { supabase } from './supabaseClient';
 
-// This is the designated admin email for Omar Ait Loutou
 export const ADMIN_EMAIL = 'aitloutouaom@gmail.com';
-const USERS_STORAGE_KEY = 'platformUsers';
-const ADMIN_PASSWORD_STORAGE_KEY = 'adminPassword';
-
-
-// --- Admin Password Persistence ---
-let ADMIN_PASSWORD = localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || '123456A';
-// Seed admin password on first run
-if (!localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY)) {
-    localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, ADMIN_PASSWORD);
-}
-
-// --- User Data Persistence ---
-const initialPlatformUsers: PlatformUser[] = [
-    { id: 1, name: 'أحمد علي', email: 'ahmed.ali@example.com', phone: '0611223344', specialization: 'كهرباء الصيانة الصناعية', role: 'متدرب', status: 'نشط', password: 'password123' },
-    { id: 2, name: 'فاطمة الزهراء', email: 'fatima.z@example.com', phone: '0655667788', specialization: 'إصلاح المركبات', role: 'متدرب', status: 'نشط', password: 'password456', mustChangePassword: true },
-    { id: 3, name: 'يوسف محمد', email: 'youssef.m@example.com', phone: '0699887766', specialization: 'كهرباء الصيانة الصناعية', role: 'متدرب', status: 'غير نشط', password: 'password789' },
-    { id: 4, name: 'خالد إبراهيم', email: 'khaled.i@example.com', phone: '0612345678', specialization: 'N/A', role: 'أستاذ', status: 'نشط', password: 'profpassword' },
-];
-
-const getUsersFromStorage = (): PlatformUser[] => {
-    try {
-        const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-        if (storedUsers) {
-            return JSON.parse(storedUsers);
-        }
-        // If no users in storage, initialize with default and save
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(initialPlatformUsers));
-        return initialPlatformUsers;
-    } catch (error) {
-        console.error("Failed to parse users from localStorage", error);
-        return initialPlatformUsers;
-    }
-};
-
-const saveUsersToStorage = (users: PlatformUser[]) => {
-    try {
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-    } catch (error) {
-        console.error("Failed to save users to localStorage", error);
-        if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-            throw new Error('global.storageFullError');
-        }
-        throw error;
-    }
-};
-
-// Initialize on load to ensure storage is seeded if empty.
-getUsersFromStorage();
 
 /**
- * Signs in a user with email and password.
+ * تسجيل الدخول باستخدام Supabase Auth
  */
 export const signIn = async (email: string, password: string): Promise<User> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
-
-    if (trimmedEmail === ADMIN_EMAIL && trimmedPassword === ADMIN_PASSWORD) {
-        return { displayName: 'عمر أيت لوتو', email: ADMIN_EMAIL, photoURL: 'https://picsum.photos/seed/omar/100' };
+    // Demo Mode: allow admin login if Supabase is not configured
+    if (!supabase) {
+        if (email === ADMIN_EMAIL && password === 'admin') {
+            return {
+                displayName: 'المدير (Demo)',
+                email: ADMIN_EMAIL,
+                photoURL: 'https://i.pravatar.cc/150?u=admin',
+                mustChangePassword: false
+            };
+        }
+        throw new Error('Supabase is not configured. Use demo credentials (admin email + "admin" password) for testing.');
     }
 
-    const platformUsersDB = getUsersFromStorage(); // Always get fresh data
-    const foundUser = platformUsersDB.find(user => user.email === trimmedEmail && user.password === trimmedPassword && user.status === 'نشط');
-    if (foundUser) {
-        return {
-            displayName: foundUser.name,
-            email: foundUser.email,
-            photoURL: `https://i.pravatar.cc/150?u=${foundUser.email}`,
-            mustChangePassword: foundUser.mustChangePassword,
-        };
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim(),
+    });
 
-    throw new Error('login.error');
-};
+    if (error) throw new Error('login.error');
 
-/**
- * Changes the admin's password.
- */
-export const changePassword = async (currentPass: string, newPass: string, confirmPass: string): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    if (currentPass.trim() !== ADMIN_PASSWORD) throw new Error('changePassword.errorCurrent');
-    if (!newPass || newPass.trim().length < 6) throw new Error('changePassword.errorShort');
-    if (newPass.trim() !== confirmPass.trim()) throw new Error('changePassword.errorMatch');
-    ADMIN_PASSWORD = newPass.trim();
-    localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, ADMIN_PASSWORD);
-};
-
-/**
- * Forces a user to change their initial/temporary password.
- */
-export const forceChangePassword = async (email: string, newPass: string, confirmPass: string): Promise<User> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    if (!newPass || newPass.trim().length < 6) throw new Error('changePassword.errorShort');
-    if (newPass.trim() !== confirmPass.trim()) throw new Error('changePassword.errorMatch');
-    
-    const platformUsersDB = getUsersFromStorage();
-    const userIndex = platformUsersDB.findIndex(u => u.email === email);
-    if (userIndex === -1) throw new Error('login.error');
-    
-    platformUsersDB[userIndex].password = newPass.trim();
-    platformUsersDB[userIndex].mustChangePassword = false;
-
-    saveUsersToStorage(platformUsersDB);
-
-    const updatedUser = platformUsersDB[userIndex];
+    const user = data.user;
     return {
-        displayName: updatedUser.name,
-        email: updatedUser.email,
-        photoURL: `https://i.pravatar.cc/150?u=${updatedUser.email}`,
-        mustChangePassword: false,
+        displayName: user.user_metadata?.display_name || user.email?.split('@')[0],
+        email: user.email || '',
+        photoURL: user.user_metadata?.photo_url || `https://i.pravatar.cc/150?u=${user.id}`,
+        mustChangePassword: user.user_metadata?.must_change_password || false
     };
 };
 
 /**
- * Mocks signing out.
+ * تسجيل الخروج
  */
 export const signOut = async (): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
+    if (!supabase) return;
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error("Error signing out:", error);
 };
 
-// --- Admin User Management Functions ---
-
-export const getUsers = async (): Promise<PlatformUser[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return getUsersFromStorage();
-};
-
-export const addUser = async (user: Omit<PlatformUser, 'id'>): Promise<PlatformUser> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const platformUsersDB = getUsersFromStorage();
-    if (platformUsersDB.some(u => u.email === user.email)) {
-        throw new Error('admin.users.errorExists');
-    }
-    const newUser: PlatformUser = { ...user, id: Date.now() };
-    const updatedUsers = [...platformUsersDB, newUser];
-    saveUsersToStorage(updatedUsers);
-    return newUser;
-};
-
-export const updateUser = async (user: PlatformUser): Promise<PlatformUser> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const platformUsersDB = getUsersFromStorage();
-    const userIndex = platformUsersDB.findIndex(u => u.id === user.id);
-    if (userIndex === -1) throw new Error("User not found");
+/**
+ * تغيير كلمة المرور للمستخدم الحالي
+ */
+export const changePassword = async (currentPass: string, newPass: string, confirmPass: string): Promise<void> => {
+    if (newPass !== confirmPass) throw new Error('changePassword.errorMatch');
+    if (!supabase) throw new Error('Action not available in demo mode');
     
-    // Check for email collision
-    if (platformUsersDB.some(u => u.email === user.email && u.id !== user.id)) {
-        throw new Error('admin.users.errorExists');
-    }
-
-    platformUsersDB[userIndex] = user;
-    saveUsersToStorage(platformUsersDB);
-    return user;
+    const { error } = await supabase.auth.updateUser({ password: newPass });
+    if (error) throw new Error(error.message);
 };
 
-export const deleteUser = async (userId: number): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const platformUsersDB = getUsersFromStorage();
-    const updatedUsers = platformUsersDB.filter(u => u.id !== userId);
-    saveUsersToStorage(updatedUsers);
+/**
+ * فرض تغيير كلمة المرور عند أول دخول
+ */
+export const forceChangePassword = async (email: string, newPass: string, confirmPass: string): Promise<User> => {
+    if (newPass !== confirmPass) throw new Error('changePassword.errorMatch');
+    if (!supabase) throw new Error('Action not available in demo mode');
+    
+    const { data, error } = await supabase.auth.updateUser({ 
+        password: newPass,
+        data: { must_change_password: false }
+    });
+
+    if (error) throw new Error(error.message);
+
+    return {
+        displayName: data.user.user_metadata?.display_name,
+        email: data.user.email || '',
+        photoURL: data.user.user_metadata?.photo_url,
+        mustChangePassword: false
+    };
 };
 
-export const deleteMultipleUsers = async (userIds: number[]): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const platformUsersDB = getUsersFromStorage();
-    const idsToDelete = new Set(userIds);
-    const updatedUsers = platformUsersDB.filter(u => !idsToDelete.has(u.id));
-    saveUsersToStorage(updatedUsers);
+// وظائف إدارة المستخدمين (للمدير)
+export const getUsers = async (): Promise<any[]> => {
+    if (!supabase) return [];
+    const { data, error } = await supabase.from('profiles').select('*');
+    if (error) throw error;
+    return data;
+};
+
+// FIX: Added addUser function to insert a new user profile into Supabase.
+export const addUser = async (userData: Omit<PlatformUser, 'id'>): Promise<void> => {
+    if (!supabase) return;
+    const { error } = await supabase.from('profiles').insert(userData);
+    if (error) throw error;
+};
+
+// FIX: Added updateUser function to update an existing user profile in Supabase.
+export const updateUser = async (userData: PlatformUser): Promise<void> => {
+    if (!supabase) return;
+    const { error } = await supabase.from('profiles').update(userData).eq('id', userData.id);
+    if (error) throw error;
+};
+
+// FIX: Added deleteUser function to remove a user profile from Supabase.
+export const deleteUser = async (id: number): Promise<void> => {
+    if (!supabase) return;
+    const { error } = await supabase.from('profiles').delete().eq('id', id);
+    if (error) throw error;
+};
+
+// FIX: Added deleteMultipleUsers function to remove multiple user profiles from Supabase.
+export const deleteMultipleUsers = async (ids: number[]): Promise<void> => {
+    if (!supabase) return;
+    const { error } = await supabase.from('profiles').delete().in('id', ids);
+    if (error) throw error;
 };

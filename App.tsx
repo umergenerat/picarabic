@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
@@ -15,9 +16,10 @@ import ForceChangePasswordModal from './components/auth/ForceChangePasswordModal
 import LoginRequired from './components/auth/LoginRequired';
 import { User, TextData, Skill, Team, TestContext, Page, NavItem, ProgressDataPoint, ChatChannel, Resource, Specialization } from './types';
 import { signIn, signOut, ADMIN_EMAIL } from './services/authService';
-import { getTexts, saveTexts, getSkills, saveSkills, getTeams, saveTeams, getTestContexts, saveTestContexts, getProgressData, saveProgressData, getChatChannels, saveChatChannels, getResources, saveResources, getCompletedSkills, saveCompletedSkills, getSpecializations, saveSpecializations } from './services/dataService';
+import * as db from './services/dataService';
 import { HomeIcon, BookOpenIcon, SparklesIcon, PresentationChartBarIcon, BeakerIcon, ChatBubbleLeftRightIcon, LinkIcon, ChartPieIcon, Cog6ToothIcon } from './components/common/Icons';
 import { useI18n } from './contexts/I18nContext';
+import { supabase } from './services/supabaseClient';
 
 const navItems: Omit<NavItem, 'label'>[] = [
     { id: 'home', labelKey: 'nav.home', icon: HomeIcon, adminOnly: false },
@@ -34,55 +36,95 @@ const navItems: Omit<NavItem, 'label'>[] = [
 const App: React.FC = () => {
     const [activePage, setActivePage] = useState<Page>('home');
     const [user, setUser] = useState<User | null>(null);
-    const [texts, setTexts] = useState<TextData[]>(getTexts());
-    const [skills, setSkills] = useState<Skill[]>(getSkills());
-    const [completedSkills, setCompletedSkills] = useState<number[]>(getCompletedSkills());
-    const [teams, setTeams] = useState<Team[]>(getTeams());
-    const [testContexts, setTestContexts] = useState<TestContext[]>(getTestContexts());
-    const [chatChannels, setChatChannels] = useState<ChatChannel[]>(getChatChannels());
-    const [resources, setResources] = useState<Resource[]>(getResources());
-    const [specializations, setSpecializations] = useState<Specialization[]>(getSpecializations());
-    const [studentProgressData, setStudentProgressData] = useState<ProgressDataPoint[]>(getProgressData());
+    const [texts, setTexts] = useState<TextData[]>([]);
+    const [skills, setSkills] = useState<Skill[]>([]);
+    const [completedSkills, setCompletedSkills] = useState<number[]>([]);
+    const [teams, setTeams] = useState<Team[]>([]);
+    const [testContexts, setTestContexts] = useState<TestContext[]>([]);
+    const [chatChannels, setChatChannels] = useState<ChatChannel[]>([]);
+    const [resources, setResources] = useState<Resource[]>([]);
+    const [specializations, setSpecializations] = useState<Specialization[]>([]);
+    const [studentProgressData, setStudentProgressData] = useState<ProgressDataPoint[]>([]);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [isForceChangePasswordModalOpen, setIsForceChangePasswordModalOpen] = useState(false);
     const [userForPasswordChange, setUserForPasswordChange] = useState<User | null>(null);
     const [loginError, setLoginError] = useState('');
     const [logoSrc, setLogoSrc] = useState<string | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const { t } = useI18n();
-    const storageErrorAlertShown = useRef(false);
 
-    const handleStorageError = (e: any) => {
-        if (e instanceof Error && e.message === 'global.storageFullError') {
-            if (!storageErrorAlertShown.current) {
-                storageErrorAlertShown.current = true;
-                alert(t('global.storageFullError'));
-                setTimeout(() => {
-                    storageErrorAlertShown.current = false;
-                }, 3000);
-            }
-        }
-    };
-
-
+    // التحقق من الجلسة عند بدء التطبيق
     useEffect(() => {
-        const savedLogo = localStorage.getItem('platformLogo');
-        if (savedLogo) {
-            setLogoSrc(savedLogo);
+        if (!supabase) {
+            loadData();
+            return;
         }
+
+        let mounted = true;
+
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (mounted) {
+                if (session) {
+                    const u = session.user;
+                    setUser({
+                        displayName: u.user_metadata?.display_name || u.email?.split('@')[0],
+                        email: u.email || '',
+                        photoURL: u.user_metadata?.photo_url || `https://i.pravatar.cc/150?u=${u.id}`,
+                        mustChangePassword: u.user_metadata?.must_change_password
+                    });
+                }
+                loadData();
+            }
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (mounted) {
+                if (session) {
+                    const u = session.user;
+                    setUser({
+                        displayName: u.user_metadata?.display_name,
+                        email: u.email || '',
+                        photoURL: u.user_metadata?.photo_url,
+                        mustChangePassword: u.user_metadata?.must_change_password
+                    });
+                } else {
+                    setUser(null);
+                }
+            }
+        });
+
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
     }, []);
 
-    // Persist content changes to localStorage
-    useEffect(() => { try { saveTexts(texts); } catch (e) { handleStorageError(e); } }, [texts]);
-    useEffect(() => { try { saveSkills(skills); } catch (e) { handleStorageError(e); } }, [skills]);
-    useEffect(() => { try { saveCompletedSkills(completedSkills); } catch (e) { handleStorageError(e); } }, [completedSkills]);
-    useEffect(() => { try { saveTeams(teams); } catch (e) { handleStorageError(e); } }, [teams]);
-    useEffect(() => { try { saveTestContexts(testContexts); } catch (e) { handleStorageError(e); } }, [testContexts]);
-    useEffect(() => { try { saveChatChannels(chatChannels); } catch (e) { handleStorageError(e); } }, [chatChannels]);
-    useEffect(() => { try { saveResources(resources); } catch (e) { handleStorageError(e); } }, [resources]);
-    useEffect(() => { try { saveProgressData(studentProgressData); } catch (e) { handleStorageError(e); } }, [studentProgressData]);
-    useEffect(() => { try { saveSpecializations(specializations); } catch (e) { handleStorageError(e); } }, [specializations]);
-
+    const loadData = async () => {
+        setIsLoading(true);
+        try {
+            const [t, s, tm, rc, sp, pd, cc] = await Promise.all([
+                db.getTexts(),
+                db.getSkills(),
+                db.getTeams(),
+                db.getResources(),
+                db.getSpecializations(),
+                db.getProgressData(),
+                db.getChatChannels()
+            ]);
+            setTexts(t);
+            setSkills(s);
+            setTeams(tm);
+            setResources(rc);
+            setSpecializations(sp);
+            setStudentProgressData(pd);
+            setChatChannels(cc);
+        } catch (err) {
+            console.error("Error loading data:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleOpenLoginModal = () => {
         setLoginError('');
@@ -108,49 +150,27 @@ const App: React.FC = () => {
         }
     };
 
-    const handlePasswordChanged = (updatedUser: User) => {
-        setUser(updatedUser);
-        setIsForceChangePasswordModalOpen(false);
-        setUserForPasswordChange(null);
-    }
-
-
     const handleLogout = async () => {
         await signOut();
         setUser(null);
-        setActivePage('home'); // Redirect to home on logout
+        setActivePage('home');
     };
     
     const isAdmin = user?.email === ADMIN_EMAIL;
 
-    useEffect(() => {
-        // Prevent accessing admin page if not admin
-        if (activePage === 'admin' && !isAdmin) {
-            setActivePage('home');
-        }
-    }, [activePage, isAdmin]);
-
-
     const renderPage = () => {
+        if (isLoading) return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
+        
         switch (activePage) {
-            case 'home':
-                return <HomePage />;
-            case 'texts':
-                return user ? <TextsSection texts={texts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'skills':
-                return user ? <SkillsSection skills={skills} completedSkills={completedSkills} setCompletedSkills={setCompletedSkills} specializations={specializations} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'presentations':
-                return <PresentationsSection teams={teams} setTeams={setTeams} user={user} isAdmin={isAdmin} />;
-            case 'tests':
-                return user ? <TestsSection testContexts={testContexts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'chat':
-                return <ChatSection user={user} chatChannels={chatChannels} setChatChannels={setChatChannels} />;
-            case 'resources':
-                return user ? <ResourcesSection resources={resources} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'dashboard':
-                return <DashboardPage progressData={studentProgressData} />;
-            case 'admin':
-                 return isAdmin ? <AdminPage 
+            case 'home': return <HomePage />;
+            case 'texts': return user ? <TextsSection texts={texts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'skills': return user ? <SkillsSection skills={skills} completedSkills={completedSkills} setCompletedSkills={setCompletedSkills} specializations={specializations} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'presentations': return <PresentationsSection teams={teams} setTeams={setTeams} user={user} isAdmin={isAdmin} />;
+            case 'tests': return user ? <TestsSection testContexts={testContexts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'chat': return <ChatSection user={user} chatChannels={chatChannels} setChatChannels={setChatChannels} />;
+            case 'resources': return user ? <ResourcesSection resources={resources} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'dashboard': return <DashboardPage progressData={studentProgressData} />;
+            case 'admin': return isAdmin ? <AdminPage 
                                     texts={texts} setTexts={setTexts} 
                                     skills={skills} setSkills={setSkills}
                                     teams={teams} setTeams={setTeams}
@@ -162,8 +182,7 @@ const App: React.FC = () => {
                                     progressData={studentProgressData}
                                     setProgressData={setStudentProgressData}
                                 /> : <HomePage />;
-            default:
-                return <HomePage />;
+            default: return <HomePage />;
         }
     };
 
@@ -177,18 +196,13 @@ const App: React.FC = () => {
                 </main>
             </div>
             {isLoginModalOpen && (
-                <LoginModal
-                    isOpen={isLoginModalOpen}
-                    onClose={() => setIsLoginModalOpen(false)}
-                    onLoginAttempt={handleAttemptLogin}
-                    error={loginError}
-                />
+                <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLoginAttempt={handleAttemptLogin} error={loginError} />
             )}
             {isForceChangePasswordModalOpen && userForPasswordChange && (
                 <ForceChangePasswordModal 
                     user={userForPasswordChange}
                     onClose={() => setIsForceChangePasswordModalOpen(false)} 
-                    onSuccess={handlePasswordChanged} 
+                    onSuccess={(u) => { setUser(u); setIsForceChangePasswordModalOpen(false); }} 
                 />
             )}
         </div>

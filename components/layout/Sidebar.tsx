@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AcademicCapIcon } from '../common/Icons';
 import { Page, NavItem } from '../../types';
@@ -45,9 +46,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, isAdmin, l
 
     const handleLinkClick = (page: Page) => {
         setActivePage(page);
-        if (window.innerWidth < 768) { // md breakpoint
-            setIsOpen(false);
-        }
+        // Always close sidebar on selection. On desktop this is harmless as sidebar is fixed/relative visible.
+        // On mobile this ensures the menu closes after selection.
+        setIsOpen(false);
     };
 
     const sidebarDirectionClasses = locale === 'ar' 

@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { TextData, Question, QuestionType } from '../../types';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import Spinner from '../common/Spinner';
-import { evaluateAnswer } from '../../services/geminiService';
-import { LightBulbIcon, XMarkIcon, CheckCircleIcon } from '../common/Icons';
+import { evaluateAnswer, textToSpeech, decodeBase64, decodeAudioData } from '../../services/geminiService';
+import { LightBulbIcon, XMarkIcon, CheckCircleIcon, SpeakerWaveIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
 import ConfirmationModal from '../common/ConfirmationModal';
 
@@ -20,8 +20,12 @@ const TextsSection: React.FC<TextsSectionProps> = ({ texts }) => {
     const [userAnswer, setUserAnswer] = useState('');
     const [feedback, setFeedback] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
     const [error, setError] = useState('');
     const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+    
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
     const handleSelectText = (text: TextData) => {
         setSelectedText(text);
@@ -29,7 +33,44 @@ const TextsSection: React.FC<TextsSectionProps> = ({ texts }) => {
         setUserAnswer('');
         setFeedback('');
         setError('');
+        stopAudio();
     }
+
+    const stopAudio = () => {
+        if (currentSourceRef.current) {
+            currentSourceRef.current.stop();
+            currentSourceRef.current = null;
+        }
+        setIsSpeaking(false);
+    };
+
+    const handleListen = async (textToSpeak: string) => {
+        if (isSpeaking) {
+            stopAudio();
+            return;
+        }
+
+        setIsSpeaking(true);
+        try {
+            const base64Audio = await textToSpeech(textToSpeak);
+            if (!audioContextRef.current) {
+                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+            const audioData = decodeBase64(base64Audio);
+            const audioBuffer = await decodeAudioData(audioData, audioContextRef.current);
+            
+            const source = audioContextRef.current.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContextRef.current.destination);
+            source.onended = () => setIsSpeaking(false);
+            source.start();
+            currentSourceRef.current = source;
+        } catch (err: any) {
+            console.error("Audio error:", err);
+            setError(t('texts.errorAudio'));
+            setIsSpeaking(false);
+        }
+    };
 
     const handleSelectQuestion = (question: Question) => {
         setSelectedQuestion(question);
@@ -82,9 +123,22 @@ const TextsSection: React.FC<TextsSectionProps> = ({ texts }) => {
                     {locale === 'ar' ? '→' : '←'} {t('texts.backToList')}
                 </Button>
                 <Card className="p-6">
-                    <span className="text-sm bg-primary-100 text-primary-800 dark:bg-slate-700 dark:text-primary-300 py-1 px-3 rounded-full">{selectedText.specialization[locale]}</span>
-                    <h3 className="text-2xl font-bold mt-3 mb-4 text-slate-900 dark:text-white">{selectedText.title[locale]}</h3>
-                    <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedText.content[locale] }} />
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <span className="text-sm bg-primary-100 text-primary-800 dark:bg-slate-700 dark:text-primary-300 py-1 px-3 rounded-full">{selectedText.specialization[locale]}</span>
+                            <h3 className="text-2xl font-bold mt-3 mb-4 text-slate-900 dark:text-white">{selectedText.title[locale]}</h3>
+                        </div>
+                        <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            onClick={() => handleListen(selectedText.content[locale])}
+                            className={`!p-3 ${isSpeaking ? 'animate-pulse bg-primary-100' : ''}`}
+                            title={t('texts.listen')}
+                        >
+                            <SpeakerWaveIcon className={`h-6 w-6 ${isSpeaking ? 'text-primary-600' : ''}`} />
+                        </Button>
+                    </div>
+                    <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed mt-4" dangerouslySetInnerHTML={{ __html: selectedText.content[locale] }} />
 
                     <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
                         <h4 className="font-bold text-xl mb-4 text-slate-900 dark:text-white">{t('texts.interactiveQuestions')}</h4>
@@ -165,25 +219,10 @@ const TextsSection: React.FC<TextsSectionProps> = ({ texts }) => {
                                 {error && <p className="text-red-500 mt-2">{error}</p>}
                                 {isLoading && <Spinner size="sm" />}
                                 {feedback && (
-                                    <div className={`mt-4 p-4 border-s-4 rounded-md ${
-                                        feedback === t('texts.correctAnswer') 
-                                            ? 'bg-green-50 dark:bg-slate-800 border-green-500' 
-                                            : feedback === t('texts.incorrectAnswer')
-                                            ? 'bg-red-50 dark:bg-slate-800 border-red-500'
-                                            : 'bg-green-50 dark:bg-slate-800 border-green-500'
-                                    }`}>
+                                    <div className={`mt-4 p-4 border-s-4 rounded-md bg-green-50 dark:bg-slate-800 border-green-500`}>
                                         <div className="flex items-center gap-2">
-                                            {feedback === t('texts.correctAnswer') && <CheckCircleIcon className="h-6 w-6 text-green-500"/>}
-                                            {feedback === t('texts.incorrectAnswer') && <XMarkIcon className="h-6 w-6 text-red-500"/>}
-                                            {feedback !== t('texts.correctAnswer') && feedback !== t('texts.incorrectAnswer') && <LightBulbIcon className="h-6 w-6 text-green-500"/>}
-                                            
-                                            <h5 className={`font-bold ${
-                                                feedback === t('texts.correctAnswer') 
-                                                    ? 'text-green-800 dark:text-green-300' 
-                                                    : feedback === t('texts.incorrectAnswer')
-                                                    ? 'text-red-800 dark:text-red-300'
-                                                    : 'text-green-800 dark:text-green-300'
-                                            }`}>
+                                            {feedback === t('texts.correctAnswer') ? <CheckCircleIcon className="h-6 w-6 text-green-500"/> : <LightBulbIcon className="h-6 w-6 text-green-500"/>}
+                                            <h5 className="font-bold text-green-800 dark:text-green-300">
                                                 { isMultipleChoice ? t('texts.resultTitle') : t('texts.evaluationTitle') }
                                             </h5>
                                         </div>

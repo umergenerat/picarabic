@@ -1,13 +1,67 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { QuizQuestion } from '../types';
 
 const getAiClient = () => {
     const API_KEY = process.env.API_KEY;
     if (!API_KEY) {
-        throw new Error("API_KEY environment variable not set");
+        throw new Error("API_KEY environment variable not set. AI features are unavailable.");
     }
     return new GoogleGenAI({ apiKey: API_KEY });
+};
+
+// Utilities for Audio Decoding
+export const decodeBase64 = (base64: string) => {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+};
+
+export const decodeAudioData = async (
+    data: Uint8Array,
+    ctx: AudioContext,
+    sampleRate: number = 24000,
+    numChannels: number = 1,
+): Promise<AudioBuffer> => {
+    const dataInt16 = new Int16Array(data.buffer);
+    const frameCount = dataInt16.length / numChannels;
+    const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+    for (let channel = 0; channel < numChannels; channel++) {
+        const channelData = buffer.getChannelData(channel);
+        for (let i = 0; i < frameCount; i++) {
+            channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+        }
+    }
+    return buffer;
+};
+
+export const textToSpeech = async (text: string): Promise<string> => {
+    try {
+        const ai = getAiClient();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text: `انطق النص التالي بوضوح وبلغة عربية فصحى: ${text}` }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Kore' }, // 'Kore' is excellent for clear Arabic pronunciation
+                    },
+                },
+            },
+        });
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!base64Audio) throw new Error("No audio data returned from Gemini TTS");
+        return base64Audio;
+    } catch (error: any) {
+        console.error("Error generating speech:", error);
+        throw new Error(error.message || "فشل في توليد الصوت.");
+    }
 };
 
 const questionGenerationSchema = {
@@ -40,59 +94,39 @@ export const generateQuiz = async (context: string): Promise<QuizQuestion[]> => 
     try {
         const ai = getAiClient();
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: `بناءً على النص التالي، قم بإنشاء 5 أسئلة اختيار من متعدد باللغة العربية لاختبار فهم المتدرب. يجب أن يكون لكل سؤال أربعة خيارات، مع تحديد الإجابة الصحيحة. النص هو: """${context}"""`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: questionGenerationSchema
             }
         });
-
-        const jsonStr = response.text.trim();
-        const questions = JSON.parse(jsonStr);
-        return questions;
-
-    } catch (error) {
+        return JSON.parse(response.text.trim());
+    } catch (error: any) {
         console.error("Error generating quiz:", error);
-        throw new Error("فشل في إنشاء الاختبار. يرجى المحاولة مرة أخرى.");
+        throw new Error(error.message || "فشل في إنشاء الاختبار.");
     }
 };
 
 export const evaluateAnswer = async (context: string, question: string, answer: string): Promise<string> => {
     try {
         const ai = getAiClient();
-        const prompt = `أنت مساعد تعليمي ذكي. قم بتقييم إجابة المتدرب التالية بناءً على النص والسؤال المرفقين. قدم تغذية راجعة بناءة ومشجعة باللغة العربية. اجعل التقييم موجزًا ومفيدًا.
-
-النص المرجعي: """${context}"""
-السؤال: "${question}"
-إجابة المتدرب: "${answer}"
-
-تقييمك:`;
-
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt
+            model: "gemini-3-flash-preview",
+            contents: `أنت مساعد تعليمي ذكي. قم بتقييم إجابة المتدرب التالية بناءً على النص والسؤال المرفقين. قدم تغذية راجعة بناءة ومشجعة باللغة العربية.\n\nنص: ${context}\nسؤال: ${question}\nإجابة: ${answer}`
         });
-
         return response.text;
-
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error evaluating answer:", error);
-        throw new Error("فشل في تقييم الإجابة. يرجى المحاولة مرة أخرى.");
+        throw new Error(error.message || "فشل في تقييم الإجابة.");
     }
 };
 
 const skillScenarioSchema = {
     type: Type.OBJECT,
     properties: {
-        scenario: {
-            type: Type.STRING,
-            description: "سيناريو واقعي قصير من بيئة عمل مهنية."
-        },
-        question: {
-            type: Type.STRING,
-            description: "سؤال مفتوح حول كيفية تعامل المتدرب مع الموقف."
-        }
+        scenario: { type: Type.STRING },
+        question: { type: Type.STRING }
     },
     required: ["scenario", "question"]
 };
@@ -100,46 +134,31 @@ const skillScenarioSchema = {
 export const generateSkillScenario = async (skillTitle: string, skillDescription: string, specialization: string): Promise<{ scenario: string; question: string; }> => {
     try {
         const ai = getAiClient();
-        const prompt = `أنت مدرب تطوير مهني. للمهارة التالية: '${skillTitle}' (${skillDescription})، قم بإنشاء سيناريو واقعي قصير ومحدد من بيئة عمل مهنية تتعلق بتخصص '${specialization}'. يجب أن يتطلب السيناريو من المتدرب تطبيق هذه المهارة. ثم، اطرح سؤالاً مفتوحاً حول كيفية تعامله مع الموقف. اجعل السيناريو والسؤال باللغة العربية وموجزين ومباشرين.`;
-        
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
+            model: "gemini-3-flash-preview",
+            contents: `أنت مدرب تطوير مهني. للمهارة: '${skillTitle}'، قم بإنشاء سيناريو واقعي من بيئة '${specialization}'.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: skillScenarioSchema
             }
         });
-        
-        const jsonStr = response.text.trim();
-        const result = JSON.parse(jsonStr);
-        return result;
-
-    } catch (error) {
+        return JSON.parse(response.text.trim());
+    } catch (error: any) {
         console.error("Error generating skill scenario:", error);
-        throw new Error("فشل في إنشاء سيناريو التمرين. يرجى المحاولة مرة أخرى.");
+        throw new Error("فشل في إنشاء سيناريو التمرين.");
     }
 };
 
-
 export const evaluateSkillAnswer = async (skillTitle: string, scenario: string, userAnswer: string): Promise<string> => {
-     try {
+    try {
         const ai = getAiClient();
-        const prompt = `أنت مدرب مهني داعم ومشجع. قام متدرب بوصف كيفية تعامله مع موقف يتعلق بمهارة '${skillTitle}'.
-السيناريو كان: "${scenario}"
-إجابة المتدرب هي: "${userAnswer}"
-
-قدم تغذية راجعة بناءة ومشجعة باللغة العربية. ركز على الجوانب الإيجابية في إجابته، ثم قدم اقتراحاً واحداً أو اثنين لتحسينها. اجعل التغذية الراجعة موجزة وإيجابية وموجهة نحو التطوير.`;
-
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt
+            model: "gemini-3-flash-preview",
+            contents: `أنت مدرب مهني. قيم استجابة المتدرب لمهارة '${skillTitle}' في هذا السيناريو: ${scenario}\nإجابة المتدرب: ${userAnswer}`
         });
-
         return response.text;
-
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error evaluating skill answer:", error);
-        throw new Error("فشل في تقييم الإجابة. يرجى المحاولة مرة أخرى.");
+        throw new Error("فشل في تقييم الإجابة.");
     }
 };

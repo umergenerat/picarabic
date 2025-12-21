@@ -52,9 +52,22 @@ export const signOut = async (): Promise<void> => {
 export const changePassword = async (currentPass: string, newPass: string, confirmPass: string): Promise<void> => {
     if (newPass !== confirmPass) throw new Error('changePassword.errorMatch');
     if (!supabase) throw new Error('Action not available in demo mode');
-    
+
     const { error } = await supabase.auth.updateUser({ password: newPass });
     if (error) throw new Error(error.message);
+};
+
+/**
+ * إرسال رابط إعادة تعيين كلمة المرور عبر البريد الإلكتروني
+ */
+export const resetPassword = async (email: string): Promise<void> => {
+    if (!supabase) throw new Error('resetPassword.notAvailable');
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) throw new Error('resetPassword.error');
 };
 
 /**
@@ -63,8 +76,8 @@ export const changePassword = async (currentPass: string, newPass: string, confi
 export const forceChangePassword = async (email: string, newPass: string, confirmPass: string): Promise<User> => {
     if (newPass !== confirmPass) throw new Error('changePassword.errorMatch');
     if (!supabase) throw new Error('Action not available in demo mode');
-    
-    const { data, error } = await supabase.auth.updateUser({ 
+
+    const { data, error } = await supabase.auth.updateUser({
         password: newPass,
         data: { must_change_password: false }
     });

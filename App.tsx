@@ -146,7 +146,10 @@ const App: React.FC = () => {
                 }
             }
         } catch (error: any) {
-            setLoginError(t(error.message));
+            console.error("Login attempt failed:", error);
+            const errorMessage = t(error.message);
+            // If translation returns the key itself or empty (depending on i18n implementation), show raw message
+            setLoginError(errorMessage !== error.message ? errorMessage : `${t('login.error')} (${error.message})`);
         }
     };
 
@@ -155,12 +158,12 @@ const App: React.FC = () => {
         setUser(null);
         setActivePage('home');
     };
-    
+
     const isAdmin = user?.email === ADMIN_EMAIL;
 
     const renderPage = () => {
         if (isLoading) return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
-        
+
         switch (activePage) {
             case 'home': return <HomePage />;
             case 'texts': return user ? <TextsSection texts={texts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
@@ -170,18 +173,18 @@ const App: React.FC = () => {
             case 'chat': return <ChatSection user={user} chatChannels={chatChannels} setChatChannels={setChatChannels} />;
             case 'resources': return user ? <ResourcesSection resources={resources} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
             case 'dashboard': return <DashboardPage progressData={studentProgressData} />;
-            case 'admin': return isAdmin ? <AdminPage 
-                                    texts={texts} setTexts={setTexts} 
-                                    skills={skills} setSkills={setSkills}
-                                    teams={teams} setTeams={setTeams}
-                                    testContexts={testContexts} setTestContexts={setTestContexts}
-                                    chatChannels={chatChannels} setChatChannels={setChatChannels}
-                                    resources={resources} setResources={setResources}
-                                    specializations={specializations} setSpecializations={setSpecializations}
-                                    logoSrc={logoSrc} setLogoSrc={setLogoSrc}
-                                    progressData={studentProgressData}
-                                    setProgressData={setStudentProgressData}
-                                /> : <HomePage />;
+            case 'admin': return isAdmin ? <AdminPage
+                texts={texts} setTexts={setTexts}
+                skills={skills} setSkills={setSkills}
+                teams={teams} setTeams={setTeams}
+                testContexts={testContexts} setTestContexts={setTestContexts}
+                chatChannels={chatChannels} setChatChannels={setChatChannels}
+                resources={resources} setResources={setResources}
+                specializations={specializations} setSpecializations={setSpecializations}
+                logoSrc={logoSrc} setLogoSrc={setLogoSrc}
+                progressData={studentProgressData}
+                setProgressData={setStudentProgressData}
+            /> : <HomePage />;
             default: return <HomePage />;
         }
     };
@@ -199,10 +202,10 @@ const App: React.FC = () => {
                 <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLoginAttempt={handleAttemptLogin} error={loginError} />
             )}
             {isForceChangePasswordModalOpen && userForPasswordChange && (
-                <ForceChangePasswordModal 
+                <ForceChangePasswordModal
                     user={userForPasswordChange}
-                    onClose={() => setIsForceChangePasswordModalOpen(false)} 
-                    onSuccess={(u) => { setUser(u); setIsForceChangePasswordModalOpen(false); }} 
+                    onClose={() => setIsForceChangePasswordModalOpen(false)}
+                    onSuccess={(u) => { setUser(u); setIsForceChangePasswordModalOpen(false); }}
                 />
             )}
         </div>

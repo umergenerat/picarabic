@@ -2,7 +2,11 @@
 import { User, PlatformUser } from '../types';
 import { supabase } from './supabaseClient';
 
-export const ADMIN_EMAIL = 'aitloutouaom@gmail.com';
+const getAdminEmail = () => {
+    return import.meta.env.VITE_ADMIN_EMAIL || 'aitloutouaom@gmail.com';
+};
+
+export const ADMIN_EMAIL = getAdminEmail();
 
 /**
  * تسجيل الدخول باستخدام Supabase Auth
@@ -26,7 +30,10 @@ export const signIn = async (email: string, password: string): Promise<User> => 
         password: password.trim(),
     });
 
-    if (error) throw new Error('login.error');
+    if (error) {
+        console.error("Login error:", error);
+        throw new Error(error.message); // Return actual error message for debugging
+    }
 
     const user = data.user;
     return {

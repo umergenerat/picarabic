@@ -3,9 +3,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import { ChatMessage, User, ChatChannel } from '../../types';
-import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, PencilIcon, SpeakerWaveIcon } from '../common/Icons';
+// FIX: Added missing ChatBubbleLeftRightIcon to the imports from Icons.
+import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, PencilIcon, SpeakerWaveIcon, ChatBubbleLeftRightIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
-import { GoogleGenAI, Chat } from '@google/genai';
+import { GoogleGenAI, Chat, GenerateContentResponse } from '@google/genai';
 import { textToSpeech, decodeBase64, decodeAudioData } from '../../services/geminiService';
 import Spinner from '../common/Spinner';
 import { getChatHistory, saveChatHistory } from '../../services/dataService';
@@ -104,6 +105,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
     const chatSession = useRef<Chat | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
     const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -161,7 +163,10 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
             const ai = new GoogleGenAI({ apiKey });
             chatSession.current = ai.chats.create({
                 model: channel.model || 'gemini-3-flash-preview',
-                config: { systemInstruction: channel.systemPrompt[locale] },
+                config: { 
+                    systemInstruction: channel.systemPrompt[locale],
+                    temperature: 0.7
+                },
             });
         } catch (error) {
              console.error("AI Init Failed:", error);
@@ -176,7 +181,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                 user: t('chat.aiName'),
                 avatar: AI_AVATAR_URL,
                 text: t('chat.aiWelcome'),
-                timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+                timestamp: new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }),
                 hasAudio: true
             }]);
         }
@@ -189,16 +194,23 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         return () => stopAudio();
     }, [activeChannel, initializeChannel]);
 
+    useEffect(() => {
+        if (activeChannelId && aiMessages.length > 1) {
+            saveChatHistory(activeChannelId, aiMessages);
+        }
+    }, [aiMessages, activeChannelId]);
+
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newMessage.trim() === '' || !user || !activeChannel) return;
+        if (newMessage.trim() === '' || !user || !activeChannel || !chatSession.current) return;
         
+        const timestamp = new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'fr-FR', { hour: '2-digit', minute: '2-digit' });
         const userMsg: ChatMessage = {
             id: Date.now(),
             user: user.displayName,
             avatar: user.photoURL,
             text: newMessage,
-            timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+            timestamp: timestamp,
         };
 
         setAiMessages(prev => [...prev, userMsg]);
@@ -206,30 +218,49 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         setIsAiThinking(true);
         
         try {
-            const response = await chatSession.current!.sendMessage({ message: userMsg.text });
+            const result: GenerateContentResponse = await chatSession.current.sendMessage({ message: userMsg.text });
             const aiMsg: ChatMessage = {
                 id: Date.now() + 1,
                 user: t('chat.aiName'),
                 avatar: AI_AVATAR_URL,
-                text: response.text,
-                timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+                text: result.text || t('chat.aiError'),
+                timestamp: new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }),
                 hasAudio: true
             };
             setAiMessages(prev => [...prev, aiMsg]);
         } catch (error: any) {
             console.error("Chat error:", error);
+            const errMsg: ChatMessage = {
+                id: Date.now() + 2,
+                user: t('chat.aiName'),
+                avatar: AI_AVATAR_URL,
+                text: t('chat.aiError'),
+                timestamp: timestamp,
+            };
+            setAiMessages(prev => [...prev, errMsg]);
         } finally {
             setIsAiThinking(false);
         }
     };
 
+    const handleSaveSettings = (updatedChannel: ChatChannel) => {
+        setChatChannels(prev => prev.map(c => c.id === updatedChannel.id ? updatedChannel : c));
+        setIsSettingsOpen(false);
+        // Re-initialize session with new prompt/model
+        initializeChannel(updatedChannel);
+    };
+
     return (
-        <div>
-            <h2 className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">{t('chat.title')}</h2>
-            <Card className="flex flex-col md:flex-row h-[calc(100vh-200px)]">
-                <div className="w-full md:w-1/4 border-b md:border-b-0 md:border-e border-slate-200 dark:border-slate-700 p-4">
-                    <h3 className="font-bold mb-4">{t('chat.channels')}</h3>
-                    <ul className="flex flex-row md:flex-col gap-1">
+        <div className="h-full flex flex-col">
+            <h2 className="text-3xl font-bold mb-6 text-slate-900 dark:text-white flex items-center gap-3">
+                <ChatBubbleLeftRightIcon className="h-8 w-8 text-primary-500" />
+                {t('chat.title')}
+            </h2>
+            <Card className="flex flex-col md:flex-row h-[calc(100vh-220px)] overflow-hidden">
+                {/* Channels Sidebar */}
+                <div className="w-full md:w-1/4 border-b md:border-b-0 md:border-e border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-4">
+                    <h3 className="font-bold mb-4 text-xs uppercase tracking-wider text-slate-500">{t('chat.channels')}</h3>
+                    <ul className="flex flex-row md:flex-col gap-2 overflow-x-auto no-scrollbar">
                        {chatChannels.map(channel => (
                             <ChannelButton 
                                 key={channel.id}
@@ -243,74 +274,118 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                     </ul>
                 </div>
 
-                <div className="flex-1 flex flex-col">
-                    <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-700">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">{activeChannel?.name[locale]}</h3>
-                        <Button variant="secondary" size="sm" onClick={() => stopAudio()} className="!p-2">
+                {/* Chat Area */}
+                <div className="flex-1 flex flex-col bg-white dark:bg-slate-800">
+                    <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md z-10">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary-100 dark:bg-slate-700 rounded-lg">
+                                {activeChannel && React.createElement(iconMap[activeChannel.iconName] || SparklesIcon, { className: "h-5 w-5 text-primary-600" })}
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{activeChannel?.name[locale]}</h3>
+                        </div>
+                        <Button variant="secondary" size="sm" onClick={() => setIsSettingsOpen(true)} className="!p-2">
                             <Cog6ToothIcon className="h-5 w-5" />
                         </Button>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4">
+                    
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
                         {aiMessages.map(msg => (
-                            <div key={msg.id} className={`flex items-start mb-4 ${msg.user === user?.displayName ? 'justify-end' : ''}`}>
-                                {msg.user !== user?.displayName && <img src={msg.avatar} alt={msg.user} className="w-10 h-10 rounded-full me-3 object-cover" />}
-                                <div className={`group relative max-w-xs lg:max-w-md p-3 rounded-lg ${msg.user === user?.displayName ? 'bg-primary-500 text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
-                                    <div className="flex items-center justify-between">
-                                        <p className="font-bold text-sm">{msg.user}</p>
-                                        <p className="text-xs opacity-70 ms-2">{msg.timestamp}</p>
+                            <div key={msg.id} className={`flex items-start gap-3 ${msg.user === user?.displayName ? 'flex-row-reverse' : ''}`}>
+                                <img src={msg.avatar} alt={msg.user} className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-white dark:ring-slate-700" />
+                                <div className={`group relative max-w-[85%] sm:max-w-md p-4 rounded-2xl shadow-sm ${
+                                    msg.user === user?.displayName 
+                                    ? 'bg-primary-600 text-white rounded-te-none' 
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-ts-none'
+                                }`}>
+                                    <div className="flex items-center justify-between gap-4 mb-1">
+                                        <p className="font-bold text-xs opacity-90">{msg.user}</p>
+                                        <p className="text-[10px] opacity-70">{msg.timestamp}</p>
                                     </div>
-                                    <p className="mt-1 whitespace-pre-wrap">{msg.text}</p>
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                    
                                     {msg.hasAudio && (
                                         <button 
                                             onClick={() => handleListen(msg)}
-                                            className={`mt-2 flex items-center gap-1 text-xs transition-colors ${msg.user === user?.displayName ? 'text-primary-100 hover:text-white' : 'text-primary-600 hover:text-primary-700'} ${speakingId === msg.id ? 'animate-pulse font-bold' : ''}`}
+                                            className={`mt-3 flex items-center gap-2 text-xs font-semibold py-1.5 px-3 rounded-full transition-all ${
+                                                msg.user === user?.displayName 
+                                                ? 'bg-white/10 hover:bg-white/20 text-white' 
+                                                : 'bg-primary-50 dark:bg-slate-600 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-slate-500'
+                                            } ${speakingId === msg.id ? 'animate-pulse ring-2 ring-primary-400' : ''}`}
                                         >
-                                            <SpeakerWaveIcon className="h-4 w-4" />
+                                            <SpeakerWaveIcon className="h-3.5 w-3.5" />
                                             {speakingId === msg.id ? t('chat.listening') : t('chat.listen')}
                                         </button>
                                     )}
                                 </div>
-                                {msg.user === user?.displayName && <img src={msg.avatar} alt={msg.user} className="w-10 h-10 rounded-full ms-3 object-cover" />}
                             </div>
                         ))}
-                        {isAiThinking && <Spinner size="sm" />}
+                        {isAiThinking && (
+                            <div className="flex items-start gap-3">
+                                <img src={AI_AVATAR_URL} className="w-9 h-9 rounded-full object-cover" alt="AI Thinking" />
+                                <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-2xl rounded-ts-none flex gap-1 items-center">
+                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+                                </div>
+                            </div>
+                        )}
                         <div ref={messagesEndRef} />
                     </div>
                     
-                    <div className="p-4 pt-0">
+                    <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20">
                         {user ? (
-                            <form onSubmit={handleSendMessage} className="flex gap-2">
+                            <form onSubmit={handleSendMessage} className="flex gap-2 max-w-4xl mx-auto">
                                 <input
                                     type="text"
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     placeholder={t('chat.messagePlaceholder')}
-                                    className="flex-1 p-2 border border-slate-300 rounded-md dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-primary-500"
+                                    className="flex-1 p-3 border border-slate-300 rounded-xl dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 shadow-inner outline-none transition-all"
                                 />
-                                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">{t('chat.send')}</button>
+                                <button 
+                                    type="submit" 
+                                    disabled={!newMessage.trim() || isAiThinking}
+                                    className="px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
+                                >
+                                    {t('chat.send')}
+                                </button>
                             </form>
                         ) : (
-                            <div className="p-4 text-center bg-slate-100 dark:bg-slate-900/50 rounded-md">
-                                <LockClosedIcon className="h-6 w-6 mx-auto mb-2" />
-                                <p>{t('chat.loginPrompt')}</p>
+                            <div className="p-6 text-center bg-white/50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 max-w-md mx-auto">
+                                <LockClosedIcon className="h-8 w-8 mx-auto mb-3 text-slate-400" />
+                                <p className="text-slate-600 dark:text-slate-400 font-medium">{t('chat.loginPrompt')}</p>
                             </div>
                         )}
                     </div>
                 </div>
             </Card>
+
+            {isSettingsOpen && activeChannel && (
+                <ChatSettingsModal 
+                    isOpen={isSettingsOpen} 
+                    onClose={() => setIsSettingsOpen(false)} 
+                    channel={activeChannel} 
+                    onSave={handleSaveSettings}
+                    onReset={(c) => handleSaveSettings(c)}
+                />
+            )}
         </div>
     );
 };
 
 interface ChannelButtonProps { name: string; channelId: string; activeChannelId: string; onClick: () => void; icon: React.ElementType; }
 const ChannelButton: React.FC<ChannelButtonProps> = ({ name, channelId, activeChannelId, onClick, icon: Icon }) => (
-    <li className="flex-1 md:flex-none">
+    <li className="flex-none">
         <button
             onClick={onClick}
-            className={`w-full text-center md:text-start p-2 rounded-md text-sm md:text-base flex items-center gap-2 ${activeChannelId === channelId ? 'bg-primary-100 dark:bg-slate-700 font-bold text-primary-700 dark:text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-600'}`}
+            className={`w-full text-center md:text-start p-3 rounded-xl text-sm transition-all flex items-center gap-3 ${
+                activeChannelId === channelId 
+                ? 'bg-primary-600 text-white shadow-md font-bold' 
+                : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 shadow-sm'
+            }`}
         >
-            <Icon className="h-5 w-5" />
-            <span className="flex-grow">{name}</span>
+            <Icon className={`h-5 w-5 ${activeChannelId === channelId ? 'text-white' : 'text-primary-500'}`} />
+            <span className="flex-grow whitespace-nowrap">{name}</span>
         </button>
     </li>
 );

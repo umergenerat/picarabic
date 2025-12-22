@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { AcademicCapIcon, ArrowRightOnRectangleIcon, Bars3Icon, SunIcon, MoonIcon } from '../common/Icons';
 import { User } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
+import Avatar from '../common/Avatar';
 
 interface HeaderProps {
     user: User | null;
@@ -45,7 +47,9 @@ const Header: React.FC<HeaderProps> = ({ user, onLogin, onLogout, logoSrc, onTog
                 {user ? (
                     <div className="flex items-center">
                         <span className="text-sm font-medium hidden sm:block">{user.displayName}</span>
-                        <img className="h-10 w-10 rounded-full object-cover mx-3" src={user.photoURL} alt="User Avatar" />
+                        <div className="mx-3">
+                            <Avatar name={user.displayName} />
+                        </div>
                         <button onClick={onLogout} className="text-sm text-slate-600 dark:text-slate-300 hover:text-primary-500 dark:hover:text-primary-400">
                             {t('global.logout')}
                         </button>

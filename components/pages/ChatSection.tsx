@@ -3,15 +3,14 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import { ChatMessage, User, ChatChannel } from '../../types';
-// FIX: Added missing ChatBubbleLeftRightIcon to the imports from Icons.
-import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, PencilIcon, SpeakerWaveIcon, ChatBubbleLeftRightIcon } from '../common/Icons';
+import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, SpeakerWaveIcon, ChatBubbleLeftRightIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
 import { GoogleGenAI, Chat, GenerateContentResponse } from '@google/genai';
 import { textToSpeech, decodeBase64, decodeAudioData } from '../../services/geminiService';
-import Spinner from '../common/Spinner';
+import Avatar from '../common/Avatar';
 import { getChatHistory, saveChatHistory } from '../../services/dataService';
 
-const AI_AVATAR_URL = 'https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d4735304ff6292a69034.svg';
+const AI_AVATAR_ICON = 'https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d4735304ff6292a69034.svg';
 
 interface ChatSettingsModalProps {
     isOpen: boolean;
@@ -179,7 +178,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
              setAiMessages([{
                 id: 0,
                 user: t('chat.aiName'),
-                avatar: AI_AVATAR_URL,
+                avatar: AI_AVATAR_ICON,
                 text: t('chat.aiWelcome'),
                 timestamp: new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }),
                 hasAudio: true
@@ -208,7 +207,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         const userMsg: ChatMessage = {
             id: Date.now(),
             user: user.displayName,
-            avatar: user.photoURL,
+            avatar: '', // نستخدم الحروف بدلاً من الصورة
             text: newMessage,
             timestamp: timestamp,
         };
@@ -222,7 +221,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
             const aiMsg: ChatMessage = {
                 id: Date.now() + 1,
                 user: t('chat.aiName'),
-                avatar: AI_AVATAR_URL,
+                avatar: AI_AVATAR_ICON, // المساعد يحتفظ بأيقونته المميزة
                 text: result.text || t('chat.aiError'),
                 timestamp: new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }),
                 hasAudio: true
@@ -233,7 +232,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
             const errMsg: ChatMessage = {
                 id: Date.now() + 2,
                 user: t('chat.aiName'),
-                avatar: AI_AVATAR_URL,
+                avatar: AI_AVATAR_ICON,
                 text: t('chat.aiError'),
                 timestamp: timestamp,
             };
@@ -246,7 +245,6 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
     const handleSaveSettings = (updatedChannel: ChatChannel) => {
         setChatChannels(prev => prev.map(c => c.id === updatedChannel.id ? updatedChannel : c));
         setIsSettingsOpen(false);
-        // Re-initialize session with new prompt/model
         initializeChannel(updatedChannel);
     };
 
@@ -291,7 +289,11 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                     <div className="flex-1 overflow-y-auto p-4 space-y-6">
                         {aiMessages.map(msg => (
                             <div key={msg.id} className={`flex items-start gap-3 ${msg.user === user?.displayName ? 'flex-row-reverse' : ''}`}>
-                                <img src={msg.avatar} alt={msg.user} className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-white dark:ring-slate-700" />
+                                {msg.avatar && msg.avatar.includes('gstatic') ? (
+                                    <img src={msg.avatar} alt={msg.user} className="w-9 h-9 rounded-full object-cover bg-white p-1 shadow-sm ring-2 ring-primary-100" />
+                                ) : (
+                                    <Avatar name={msg.user} size="sm" />
+                                )}
                                 <div className={`group relative max-w-[85%] sm:max-w-md p-4 rounded-2xl shadow-sm ${
                                     msg.user === user?.displayName 
                                     ? 'bg-primary-600 text-white rounded-te-none' 
@@ -321,7 +323,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                         ))}
                         {isAiThinking && (
                             <div className="flex items-start gap-3">
-                                <img src={AI_AVATAR_URL} className="w-9 h-9 rounded-full object-cover" alt="AI Thinking" />
+                                <img src={AI_AVATAR_ICON} className="w-9 h-9 rounded-full object-cover bg-white p-1" alt="AI Thinking" />
                                 <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-2xl rounded-ts-none flex gap-1 items-center">
                                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
                                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>

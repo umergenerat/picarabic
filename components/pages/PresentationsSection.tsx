@@ -30,7 +30,7 @@ const PresentationsSection: React.FC<PresentationsSectionProps> = ({ teams, setT
             setActionStates(prev => ({ ...prev, [teamId]: { progress: 0, status: 'idle', message: '' } }));
         }
     };
-    
+
     const handleUpload = (teamId: number) => {
         const file = selectedFiles[teamId];
         if (!file) return;
@@ -52,11 +52,11 @@ const PresentationsSection: React.FC<PresentationsSectionProps> = ({ teams, setT
         // Simulate upload completion
         setTimeout(() => {
             clearInterval(interval);
-            
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 const fileDataUrl = e.target?.result as string;
-                setTeams(currentTeams => currentTeams.map(team => 
+                setTeams(currentTeams => currentTeams.map(team =>
                     team.id === teamId ? { ...team, presentation: file.name, presentationData: fileDataUrl } : team
                 ));
                 setActionStates(prev => ({ ...prev, [teamId]: { progress: 100, status: 'success', message: t('presentations.uploadSuccess') } }));
@@ -75,7 +75,7 @@ const PresentationsSection: React.FC<PresentationsSectionProps> = ({ teams, setT
             };
             reader.readAsDataURL(file);
 
-        }, 2200); 
+        }, 2200);
     };
 
     return (
@@ -85,7 +85,7 @@ const PresentationsSection: React.FC<PresentationsSectionProps> = ({ teams, setT
                 {teams.map(team => {
                     const selectedFile = selectedFiles[team.id];
                     const actionState = actionStates[team.id] || { status: 'idle', progress: 0, message: '' };
-                    const isTeamMember = user ? team.members.includes(user.displayName) || team.teamLeader === user.displayName : false;
+                    const isTeamMember = user ? team.members?.includes(user.displayName) || team.teamLeader === user.displayName : false;
                     const canUpload = isTeamMember || isAdmin;
 
                     return (
@@ -101,8 +101,8 @@ const PresentationsSection: React.FC<PresentationsSectionProps> = ({ teams, setT
                                     </span>
                                 </div>
                             </div>
-                            
-                             <div className="space-y-3 mb-4 text-sm text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 pb-4">
+
+                            <div className="space-y-3 mb-4 text-sm text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 pb-4">
                                 <div>
                                     <span className="font-semibold text-slate-800 dark:text-slate-200 block">{t('presentations.presentationTitle')}</span>
                                     <p>{team.presentationTitle[locale]}</p>
@@ -119,7 +119,7 @@ const PresentationsSection: React.FC<PresentationsSectionProps> = ({ teams, setT
                                 </div>
                                 <div>
                                     <span className="font-semibold text-slate-800 dark:text-slate-200 block">{t('presentations.members')}</span>
-                                    <p>{team.members.join('، ')}</p>
+                                    <p>{team.members?.join('، ') || ''}</p>
                                 </div>
                             </div>
 
@@ -149,37 +149,37 @@ const PresentationsSection: React.FC<PresentationsSectionProps> = ({ teams, setT
                                         <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">{t('presentations.notSubmitted')}</p>
                                     </div>
                                 )}
-                                
+
                                 {canUpload ? (
                                     <div className="pt-4 border-t border-slate-200 dark:border-slate-600 space-y-3">
-                                      {!team.presentation && actionState.status === 'idle' && (
+                                        {!team.presentation && actionState.status === 'idle' && (
                                             <>
                                                 <label htmlFor={`file-upload-${team.id}`} className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                                     {t('presentations.uploadLabel')}
                                                 </label>
                                                 <div className="flex items-center gap-2">
-                                                    <input id={`file-upload-${team.id}`} name={`file-upload-${team.id}`} type="file" onChange={(e) => handleFileChange(e, team.id)} className="block w-full text-sm text-slate-500 file:me-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-slate-600 dark:file:text-primary-300 dark:hover:file:bg-slate-500"/>
+                                                    <input id={`file-upload-${team.id}`} name={`file-upload-${team.id}`} type="file" onChange={(e) => handleFileChange(e, team.id)} className="block w-full text-sm text-slate-500 file:me-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-slate-600 dark:file:text-primary-300 dark:hover:file:bg-slate-500" />
                                                 </div>
                                                 <Button onClick={() => handleUpload(team.id)} className="w-full mt-3" disabled={!selectedFile}>{t('presentations.uploadButton')}</Button>
                                             </>
                                         )}
-    
+
                                         {actionState.status === 'uploading' && (
                                             <div>
                                                 <p className="text-sm font-medium text-center mb-2">{t('presentations.uploading')} {actionState.progress}%</p>
                                                 <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
-                                                    <div className="bg-primary-600 h-2.5 rounded-full transition-all duration-300" style={{width: `${actionState.progress}%`}} />
+                                                    <div className="bg-primary-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${actionState.progress}%` }} />
                                                 </div>
                                             </div>
                                         )}
-    
+
                                         {actionState.status === 'success' && (
                                             <div className="flex items-center gap-3 p-3 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 rounded-md">
                                                 <CheckCircleIcon className="h-6 w-6" />
                                                 <p className="text-sm font-semibold">{actionState.message}</p>
                                             </div>
                                         )}
-    
+
                                         {actionState.status === 'error' && (
                                             <div className="flex items-center gap-3 p-3 bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 rounded-md">
                                                 <ExclamationTriangleIcon className="h-6 w-6" />

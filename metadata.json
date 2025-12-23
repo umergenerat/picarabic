@@ -1,5 +1,16 @@
 {
   "name": "PICArabic",
   "description": "منصة تعليمية تفاعلية لمتدربي المعهد المتخصص للتكنولوجيا التطبيقية بطاطا، تهدف إلى تعزيز كفايات التواصل الشفهي والكتابي من خلال بيئة تعلم رقمية تعتمد التفاعل، التعاون، والتقويم الذكي.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "mcpServers": {
+    "TestSprite": {
+      "command": "npx",
+      "args": [
+        "@testsprite/testsprite-mcp@latest"
+      ],
+      "env": {
+        "API_KEY": "your-api-key"
+      }
+    }
+  }
 }

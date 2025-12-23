@@ -68,7 +68,7 @@ const App: React.FC = () => {
                 if (session) {
                     const u = session.user;
                     setUser({
-                        displayName: u.user_metadata?.display_name || u.email?.split('@')[0],
+                        displayName: u.user_metadata?.display_name || u.email?.split('@')[0] || 'User',
                         email: u.email || '',
                         photoURL: u.user_metadata?.photo_url || `https://i.pravatar.cc/150?u=${u.id}`,
                         mustChangePassword: u.user_metadata?.must_change_password
@@ -103,14 +103,15 @@ const App: React.FC = () => {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const [t, s, tm, rc, sp, pd, cc] = await Promise.all([
+            const [t, s, tm, rc, sp, pd, cc, tc] = await Promise.all([
                 db.getTexts(),
                 db.getSkills(),
                 db.getTeams(),
                 db.getResources(),
                 db.getSpecializations(),
                 db.getProgressData(),
-                db.getChatChannels()
+                db.getChatChannels(),
+                db.getTestContexts()
             ]);
             setTexts(t);
             setSkills(s);
@@ -119,6 +120,7 @@ const App: React.FC = () => {
             setSpecializations(sp);
             setStudentProgressData(pd);
             setChatChannels(cc);
+            setTestContexts(tc);
         } catch (err) {
             console.error("Error loading data:", err);
         } finally {

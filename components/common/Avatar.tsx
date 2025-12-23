@@ -10,6 +10,7 @@ interface AvatarProps {
 const Avatar: React.FC<AvatarProps> = ({ name, size = 'md', className = '' }) => {
     // الحصول على الحروف الأولى (الأول من كل كلمة، بحد أقصى حرفين)
     const getInitials = (userName: string) => {
+        if (!userName) return '?';
         const parts = userName.trim().split(/\s+/);
         if (parts.length === 0) return '?';
         if (parts.length === 1) return parts[0].substring(0, 1).toUpperCase();
@@ -18,6 +19,7 @@ const Avatar: React.FC<AvatarProps> = ({ name, size = 'md', className = '' }) =>
 
     // توليد لون خلفية ثابت بناءً على الاسم لضمان استمرارية اللون لنفس المستخدم
     const getColor = (userName: string) => {
+        if (!userName) return 'bg-slate-500';
         const colors = [
             'bg-primary-600',
             'bg-teal-600',
@@ -40,7 +42,7 @@ const Avatar: React.FC<AvatarProps> = ({ name, size = 'md', className = '' }) =>
     };
 
     return (
-        <div 
+        <div
             className={`${sizeClasses[size]} rounded-full flex items-center justify-center font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-700 shrink-0 ${getColor(name)} ${className}`}
             title={name}
         >

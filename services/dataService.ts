@@ -11,12 +11,23 @@ export const getSkills = async (): Promise<Skill[]> => {
     if (!isSupabaseReady()) return initialData.initialSkills;
     const { data, error } = await supabase!.from('skills').select('*').order('id', { ascending: true });
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        iconName: item.icon_name
+    }));
 };
 
 export const saveSkills = async (skills: Skill[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('skills').upsert(skills);
+    const items = skills.map(s => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        icon_name: s.iconName
+    }));
+    const { error } = await supabase!.from('skills').upsert(items);
     if (error) throw error;
 };
 
@@ -39,12 +50,35 @@ export const getTeams = async (): Promise<Team[]> => {
     if (!isSupabaseReady()) return initialData.initialTeams;
     const { data, error } = await supabase!.from('teams').select('*');
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        specialization: item.specialization,
+        members: item.members,
+        presentation: item.presentation,
+        presentationData: item.presentation_data,
+        videoSummaryUrl: item.video_summary_url,
+        presentationTitle: item.presentation_title,
+        dueDate: item.due_date,
+        teamLeader: item.team_leader
+    }));
 };
 
 export const saveTeams = async (teams: Team[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('teams').upsert(teams);
+    const items = teams.map(t => ({
+        id: t.id,
+        name: t.name,
+        specialization: t.specialization,
+        members: t.members,
+        presentation: t.presentation,
+        presentation_data: t.presentationData,
+        video_summary_url: t.videoSummaryUrl,
+        presentation_title: t.presentationTitle,
+        due_date: t.dueDate,
+        team_leader: t.teamLeader
+    }));
+    const { error } = await supabase!.from('teams').upsert(items);
     if (error) throw error;
 };
 
@@ -67,12 +101,21 @@ export const getSpecializations = async (): Promise<Specialization[]> => {
     if (!isSupabaseReady()) return initialData.initialSpecializations;
     const { data, error } = await supabase!.from('specializations').select('*');
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        traineeCount: item.trainee_count
+    }));
 };
 
 export const saveSpecializations = async (specs: Specialization[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('specializations').upsert(specs);
+    const items = specs.map(s => ({
+        id: s.id,
+        name: s.name,
+        trainee_count: s.traineeCount
+    }));
+    const { error } = await supabase!.from('specializations').upsert(items);
     if (error) throw error;
 };
 
@@ -81,12 +124,27 @@ export const getChatChannels = async (): Promise<ChatChannel[]> => {
     if (!isSupabaseReady()) return initialData.initialChatChannels;
     const { data, error } = await supabase!.from('chat_channels').select('*');
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        defaultSystemPrompt: item.default_system_prompt,
+        systemPrompt: item.system_prompt,
+        iconName: item.icon_name,
+        model: item.model
+    }));
 };
 
 export const saveChatChannels = async (channels: ChatChannel[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('chat_channels').upsert(channels);
+    const items = channels.map(c => ({
+        id: c.id,
+        name: c.name,
+        default_system_prompt: c.defaultSystemPrompt,
+        system_prompt: c.systemPrompt,
+        icon_name: c.iconName,
+        model: c.model
+    }));
+    const { error } = await supabase!.from('chat_channels').upsert(items);
     if (error) throw error;
 };
 
@@ -109,7 +167,26 @@ export const getProgressData = async (): Promise<ProgressDataPoint[]> => {
     if (!isSupabaseReady()) return initialData.initialProgressData;
     const { data, error } = await supabase!.from('progress_data').select('*').order('id', { ascending: true });
     if (error) throw error;
+    return (data || []).map(item => ({
+        month: item.month,
+        completedTexts: item.completed_texts,
+        acquiredSkills: item.acquired_skills,
+        testScores: item.test_scores
+    }));
+};
+
+// سياقات الاختبارات (Test Contexts)
+export const getTestContexts = async (): Promise<TestContext[]> => {
+    if (!isSupabaseReady()) return initialData.initialTestContexts;
+    const { data, error } = await supabase!.from('test_contexts').select('*');
+    if (error) throw error;
     return data || [];
+};
+
+export const saveTestContexts = async (contexts: TestContext[]) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('test_contexts').upsert(contexts);
+    if (error) throw error;
 };
 
 // FIX: Added getChatHistory to retrieve persisted chat messages from localStorage.

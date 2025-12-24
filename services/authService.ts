@@ -42,10 +42,22 @@ export const changePassword = async (currentPass: string, newPass: string, confi
     if (error) throw new Error(error.message);
 };
 
+export const resetPassword = async (email: string): Promise<void> => {
+    if (!supabase) {
+        // Mock success in demo mode
+        console.log(`Reset password email would be sent to ${email}`);
+        return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) throw new Error(error.message);
+};
+
 // FIX: Implemented forceChangePassword to support password updates and profile synchronization.
 export const forceChangePassword = async (email: string, newPass: string, confirmPass: string): Promise<User> => {
     if (newPass !== confirmPass) throw new Error('changePassword.errorMatch');
-    
+
     if (!supabase) {
         // Fallback for demo mode
         return { displayName: email.split('@')[0], email, photoURL: '', mustChangePassword: false };
@@ -79,7 +91,7 @@ export const getUsers = async (): Promise<PlatformUser[]> => {
 
 export const saveUser = async (user: PlatformUser): Promise<void> => {
     if (!supabase) return;
-    
+
     // In production, setting another user's password usually happens via a trigger or Edge Function.
     // Here we ensure the profile data is synchronized.
     const { error } = await supabase.from('profiles').upsert({
@@ -92,7 +104,7 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
         status: user.status,
         must_change_password: user.mustChangePassword || false
     });
-    
+
     if (error) throw error;
 };
 

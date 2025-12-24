@@ -148,6 +148,26 @@ export const getProgressData = async (): Promise<ProgressDataPoint[]> => {
     return data || [];
 };
 
+// سياقات الاختبارات (Test Contexts)
+export const getTestContexts = async (): Promise<TestContext[]> => {
+    if (!isSupabaseReady()) return initialData.initialTestContexts;
+    const { data, error } = await supabase!.from('test_contexts').select('*').order('id', { ascending: true });
+    if (error) throw error;
+    return data || [];
+};
+
+export const saveTestContexts = async (contexts: TestContext[]) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('test_contexts').upsert(contexts);
+    if (error) throw error;
+};
+
+export const deleteTestContext = async (id: string) => {
+    if (!isSupabaseReady()) return;
+    const { error } = await supabase!.from('test_contexts').delete().eq('id', id);
+    if (error) throw error;
+};
+
 export const getChatHistory = (channelId: string): any[] => {
     const saved = localStorage.getItem(`platformChatHistory_${channelId}`);
     return saved ? JSON.parse(saved) : [];

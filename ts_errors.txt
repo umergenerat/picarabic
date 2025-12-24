@@ -1,0 +1,2 @@
+App.tsx(114,20): error TS2339: Property 'getTestContexts' does not exist on type 'typeof import("C:/Users/aitlo/OneDrive/Bureau/Nouveau dossier (2)/picarabic/services/dataService")'.
+components/auth/LoginModal.tsx(6,10): error TS2305: Module '"../../services/authService"' has no exported member 'resetPassword'.

@@ -26,6 +26,9 @@ export interface Skill {
     iconName: string;
 }
 
+export type DifficultyLevel = 'مبتدئ' | 'متوسط' | 'متقدم';
+export type CognitiveLevel = 'تذكر' | 'فهم' | 'تطبيق' | 'تحليل' | 'تقييم' | 'إبداع';
+
 export interface Specialization {
     id: string;
     name: MultilingualString;
@@ -43,6 +46,8 @@ export interface Question {
     id: string;
     text: MultilingualString;
     type: QuestionType;
+    cognitiveLevel?: CognitiveLevel;
+    hint?: MultilingualString;
     options?: AnswerOption[];
     correctAnswerId?: string;
 }
@@ -51,6 +56,9 @@ export interface TextData {
     id: string;
     title: MultilingualString;
     specialization: MultilingualString;
+    difficulty: DifficultyLevel;
+    learningObjectives: MultilingualString[];
+    skillIds: number[];
     content: MultilingualString;
     questions: Question[];
 }

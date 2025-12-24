@@ -168,7 +168,7 @@ const App: React.FC = () => {
 
         switch (activePage) {
             case 'home': return <HomePage />;
-            case 'texts': return user ? <TextsSection texts={texts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'texts': return user ? <TextsSection texts={texts} skills={skills} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
             case 'skills': return user ? <SkillsSection skills={skills} completedSkills={completedSkills} setCompletedSkills={setCompletedSkills} specializations={specializations} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
             case 'presentations': return <PresentationsSection teams={teams} setTeams={setTeams} user={user} isAdmin={isAdmin} />;
             case 'tests': return user ? <TestsSection testContexts={testContexts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;

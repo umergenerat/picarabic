@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Card from '../common/Card';
-import { 
-    DocumentTextIcon, UsersIcon, ChartPieIcon, Cog6ToothIcon, PencilIcon, TrashIcon, 
+import {
+    DocumentTextIcon, UsersIcon, ChartPieIcon, Cog6ToothIcon, PencilIcon, TrashIcon,
     XMarkIcon, BookOpenIcon, SparklesIcon, PresentationChartBarIcon, BeakerIcon, iconMap, MagnifyingGlassIcon,
     PlusCircleIcon, LockClosedIcon, CheckIcon, CheckCircleIcon, ExclamationTriangleIcon, AcademicCapIcon
 } from '../common/Icons';
@@ -10,7 +10,10 @@ import { useI18n } from '../../contexts/I18nContext';
 import * as authService from '../../services/authService';
 import * as db from '../../services/dataService';
 import Spinner from '../common/Spinner';
-import { TextData, PlatformUser, UserRole, Skill, Team, Specialization, MultilingualString, ProgressDataPoint, ChatChannel, Resource, TestContext } from '../../types';
+import {
+    TextData, PlatformUser, UserRole, Skill, Team, Specialization, MultilingualString,
+    ProgressDataPoint, ChatChannel, Resource, TestContext, Question, CognitiveLevel, QuestionType, DifficultyLevel
+} from '../../types';
 import Button from '../common/Button';
 import Avatar from '../common/Avatar';
 
@@ -46,6 +49,15 @@ const SimplePieChart: React.FC<{ data: { name: string, value: number, color: str
     );
 };
 
+const DifficultyBadge: React.FC<{ level: DifficultyLevel }> = ({ level }) => {
+    const colors = {
+        'مبتدئ': 'bg-green-100 text-green-700 border-green-200',
+        'متوسط': 'bg-blue-100 text-blue-700 border-blue-200',
+        'متقدم': 'bg-purple-100 text-purple-700 border-purple-200'
+    };
+    return <span className={`px-2 py-0.5 rounded-full text-[10px] border ${colors[level]}`}>{level}</span>;
+};
+
 // --- Multilingual Input (French Optional) ---
 const MultilingualInput: React.FC<{ label: string; value: MultilingualString; name: string; onChange: (e: any, lang: 'ar' | 'fr') => void; type?: 'input' | 'textarea' }> = ({ label, value, name, onChange, type = 'input' }) => {
     const Component = type === 'input' ? 'input' : 'textarea';
@@ -53,18 +65,18 @@ const MultilingualInput: React.FC<{ label: string; value: MultilingualString; na
         <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Component 
-                    value={value.ar} 
-                    onChange={(e: any) => onChange(e, 'ar')} 
-                    placeholder="العربية (إلزامي)" 
-                    className="block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm" 
-                    required 
+                <Component
+                    value={value.ar}
+                    onChange={(e: any) => onChange(e, 'ar')}
+                    placeholder="العربية (إلزامي)"
+                    className="block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm"
+                    required
                 />
-                <Component 
-                    value={value.fr} 
-                    onChange={(e: any) => onChange(e, 'fr')} 
-                    placeholder="Français (اختياري)" 
-                    className="block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm" 
+                <Component
+                    value={value.fr}
+                    onChange={(e: any) => onChange(e, 'fr')}
+                    placeholder="Français (اختياري)"
+                    className="block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm"
                 />
             </div>
         </div>
@@ -81,26 +93,26 @@ const UserEditForm: React.FC<{ user: PlatformUser; specializations: Specializati
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium mb-1">الاسم الكامل</label>
-                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full rounded-md border-slate-300 dark:bg-slate-700" required />
+                    <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-md border-slate-300 dark:bg-slate-700" required />
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">البريد الإلكتروني</label>
-                    <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full rounded-md border-slate-300 dark:bg-slate-700" required />
+                    <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full rounded-md border-slate-300 dark:bg-slate-700" required />
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">التخصص</label>
-                    <select value={formData.specialization} onChange={(e) => setFormData({...formData, specialization: e.target.value})} className="w-full rounded-md border-slate-300 dark:bg-slate-700">
+                    <select value={formData.specialization} onChange={(e) => setFormData({ ...formData, specialization: e.target.value })} className="w-full rounded-md border-slate-300 dark:bg-slate-700">
                         <option value="">-- اختر التخصص --</option>
                         {specializations.map(s => <option key={s.id} value={s.name[locale]}>{s.name[locale]}</option>)}
                     </select>
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">كلمة المرور</label>
-                    <input 
-                        type="password" 
-                        value={formData.password || ''} 
-                        onChange={(e) => setFormData({...formData, password: e.target.value})} 
-                        className="w-full rounded-md border-slate-300 dark:bg-slate-700" 
+                    <input
+                        type="password"
+                        value={formData.password || ''}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full rounded-md border-slate-300 dark:bg-slate-700"
                         placeholder="••••••••"
                         required={!formData.id}
                     />
@@ -108,12 +120,192 @@ const UserEditForm: React.FC<{ user: PlatformUser; specializations: Specializati
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <input type="checkbox" id="forcePass" checked={formData.mustChangePassword} onChange={(e) => setFormData({...formData, mustChangePassword: e.target.checked})} className="rounded text-primary-600" />
+                <input type="checkbox" id="forcePass" checked={formData.mustChangePassword} onChange={(e) => setFormData({ ...formData, mustChangePassword: e.target.checked })} className="rounded text-primary-600" />
                 <label htmlFor="forcePass" className="text-sm">فرض تغيير كلمة المرور عند أول دخول</label>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button variant="secondary" onClick={onCancel}>إلغاء</Button>
                 <Button type="submit">حفظ المتدرب</Button>
+            </div>
+        </form>
+    );
+};
+
+const TextEditForm: React.FC<{ text: TextData; skills: Skill[]; specializations: Specialization[]; onSave: (t: TextData) => void; onCancel: () => void }> = ({ text, skills, specializations, onSave, onCancel }) => {
+    const { t, locale } = useI18n();
+    const [formData, setFormData] = useState<TextData>(text);
+
+    const handleAddObjective = () => {
+        setFormData({ ...formData, learningObjectives: [...formData.learningObjectives, { ar: '', fr: '' }] });
+    };
+
+    const handleRemoveObjective = (index: number) => {
+        const newObjs = [...formData.learningObjectives];
+        newObjs.splice(index, 1);
+        setFormData({ ...formData, learningObjectives: newObjs });
+    };
+
+    const handleAddQuestion = () => {
+        const newQ: Question = {
+            id: `q-${Date.now()}`,
+            text: { ar: '', fr: '' },
+            type: 'فهم',
+            cognitiveLevel: 'فهم',
+            options: []
+        };
+        setFormData({ ...formData, questions: [...formData.questions, newQ] });
+    };
+
+    const handleRemoveQuestion = (index: number) => {
+        const newQs = [...formData.questions];
+        newQs.splice(index, 1);
+        setFormData({ ...formData, questions: newQs });
+    };
+
+    return (
+        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-8">
+            <div className="flex justify-between items-center border-b pb-4">
+                <h3 className="text-2xl font-bold">{formData.id ? 'تعديل المحتوى التعليمي' : 'إضافة محتوى جديد'}</h3>
+                <div className="flex gap-2">
+                    <Button variant="secondary" onClick={onCancel}>إلغاء</Button>
+                    <Button type="submit">حفظ المحتوى</Button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <MultilingualInput label="عنوان النص" value={formData.title} name="title" onChange={(e, lang) => setFormData({ ...formData, title: { ...formData.title, [lang]: e.target.value } })} />
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">التخصص</label>
+                        <select
+                            value={formData.specialization.ar}
+                            onChange={(e) => {
+                                const spec = specializations.find(s => s.name.ar === e.target.value);
+                                if (spec) setFormData({ ...formData, specialization: spec.name });
+                            }}
+                            className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
+                        >
+                            <option value="">-- اختر التخصص --</option>
+                            {specializations.map(s => <option key={s.id} value={s.name.ar}>{s.name.ar}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">المستوى</label>
+                        <select value={formData.difficulty} onChange={(e: any) => setFormData({ ...formData, difficulty: e.target.value })} className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm">
+                            <option value="مبتدئ">مبتدئ</option>
+                            <option value="متوسط">متوسط</option>
+                            <option value="متقدم">متقدم</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <MultilingualInput label="المحتوى النصي (HTML مدعوم)" type="textarea" value={formData.content} name="content" onChange={(e, lang) => setFormData({ ...formData, content: { ...formData.content, [lang]: e.target.value } })} />
+
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">الأهداف التعلمية</label>
+                    <Button type="button" size="sm" variant="secondary" onClick={handleAddObjective}>+ إضافة هدف</Button>
+                </div>
+                <div className="space-y-3">
+                    {formData.learningObjectives.map((obj, idx) => (
+                        <div key={idx} className="flex gap-2 items-start bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg">
+                            <div className="flex-grow">
+                                <MultilingualInput label={`الهدف ${idx + 1}`} value={obj} name={`obj-${idx}`} onChange={(e, lang) => {
+                                    const newObjs = [...formData.learningObjectives];
+                                    newObjs[idx] = { ...newObjs[idx], [lang]: e.target.value };
+                                    setFormData({ ...formData, learningObjectives: newObjs });
+                                }} />
+                            </div>
+                            <button type="button" onClick={() => handleRemoveObjective(idx)} className="mt-7 p-2 text-red-500 hover:bg-red-50 rounded"><TrashIcon className="h-4 w-4" /></button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-bold mb-4">المهارات المرتبطة</label>
+                <div className="flex flex-wrap gap-3">
+                    {skills.map(skill => (
+                        <label key={skill.id} className={`flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors ${formData.skillIds.includes(skill.id) ? 'bg-primary-50 border-primary-500 font-bold' : 'bg-white border-slate-200 dark:bg-slate-800'}`}>
+                            <input
+                                type="checkbox"
+                                checked={formData.skillIds.includes(skill.id)}
+                                onChange={(e) => {
+                                    const newIds = e.target.checked
+                                        ? [...formData.skillIds, skill.id]
+                                        : formData.skillIds.filter(id => id !== skill.id);
+                                    setFormData({ ...formData, skillIds: newIds });
+                                }}
+                                className="hidden"
+                            />
+                            {iconMap[skill.iconName] && React.createElement(iconMap[skill.iconName], { className: "h-4 w-4" })}
+                            <span className="text-xs">{skill.title[locale]}</span>
+                        </label>
+                    ))}
+                </div>
+            </div>
+
+            <div>
+                <div className="flex justify-between items-center mb-6 border-t pt-6">
+                    <label className="text-lg font-bold">الأسئلة التفاعلية</label>
+                    <Button type="button" size="sm" onClick={handleAddQuestion}>+ إضافة سؤال</Button>
+                </div>
+                <div className="space-y-6">
+                    {formData.questions.map((q, idx) => (
+                        <Card key={q.id} className="p-4 border-s-4 border-s-primary-500">
+                            <div className="flex justify-between items-start mb-4">
+                                <span className="bg-primary-100 text-primary-700 px-2 py-0.5 rounded text-[10px] font-bold">سؤال {idx + 1}</span>
+                                <button type="button" onClick={() => handleRemoveQuestion(idx)} className="text-red-500 hover:text-red-700"><TrashIcon className="h-4 w-4" /></button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                                <div className="sm:col-span-2">
+                                    <MultilingualInput label="نص السؤال" value={q.text} name={`q-${idx}-text`} onChange={(e, lang) => {
+                                        const newQs = [...formData.questions];
+                                        newQs[idx] = { ...newQs[idx], text: { ...newQs[idx].text, [lang]: e.target.value } };
+                                        setFormData({ ...formData, questions: newQs });
+                                    }} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">المجال الإدراكي (تصنيف بلوم)</label>
+                                    <select
+                                        value={q.cognitiveLevel}
+                                        onChange={(e: any) => {
+                                            const newQs = [...formData.questions];
+                                            newQs[idx] = { ...newQs[idx], cognitiveLevel: e.target.value };
+                                            setFormData({ ...formData, questions: newQs });
+                                        }}
+                                        className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-xs"
+                                    >
+                                        {(['تذكر', 'فهم', 'تطبيق', 'تحليل', 'تقييم', 'إبداع'] as CognitiveLevel[]).map(lv => <option key={lv} value={lv}>{lv}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">نوع السؤال</label>
+                                    <select
+                                        value={q.type}
+                                        onChange={(e: any) => {
+                                            const newQs = [...formData.questions];
+                                            newQs[idx] = { ...newQs[idx], type: e.target.value };
+                                            setFormData({ ...formData, questions: newQs });
+                                        }}
+                                        className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-xs"
+                                    >
+                                        {(['فهم', 'تحليل', 'مناقشة', 'مفاهيم', 'ابداء الرأي'] as QuestionType[]).map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                                <MultilingualInput label="تلميح للمتدرب (اختياري)" value={q.hint || { ar: '', fr: '' }} name={`q-${idx}-hint`} onChange={(e, lang) => {
+                                    const newQs = [...formData.questions];
+                                    newQs[idx] = { ...newQs[idx], hint: { ...(newQs[idx].hint || { ar: '', fr: '' }), [lang]: e.target.value } };
+                                    setFormData({ ...formData, questions: newQs });
+                                }} />
+                            </div>
+                        </Card>
+                    ))}
+                </div>
             </div>
         </form>
     );
@@ -159,6 +351,19 @@ const AdminPage: React.FC<any> = (props) => {
         finally { setIsLoading(false); }
     };
 
+    const handleSaveText = async (text: TextData) => {
+        setIsLoading(true);
+        try {
+            const updatedTexts = props.texts.some((t: any) => t.id === text.id)
+                ? props.texts.map((t: any) => t.id === text.id ? text : t)
+                : [...props.texts, text];
+            await db.saveTexts(updatedTexts);
+            // Refresh would ideally happen via context or props update
+            setEditingItem(null);
+        } catch (e) { alert("حدث خطأ أثناء حفظ النص"); }
+        finally { setIsLoading(false); }
+    };
+
     const handleAdminPassChange = async (e: React.FormEvent) => {
         e.preventDefault();
         setAdminMsg({ text: '', type: '' });
@@ -197,7 +402,7 @@ const AdminPage: React.FC<any> = (props) => {
                 <div className="space-y-6">
                     <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit">
                         {['texts', 'skills', 'specializations'].map((type: any) => (
-                            <button key={type} onClick={() => {setActiveContentType(type); setEditingItem(null);}} className={`px-4 py-2 text-xs font-bold rounded-md ${activeContentType === type ? 'bg-white shadow-sm text-primary-600' : 'text-slate-500'}`}>
+                            <button key={type} onClick={() => { setActiveContentType(type); setEditingItem(null); }} className={`px-4 py-2 text-xs font-bold rounded-md ${activeContentType === type ? 'bg-white shadow-sm text-primary-600' : 'text-slate-500'}`}>
                                 {t(`nav.${type}`)}
                             </button>
                         ))}
@@ -205,28 +410,62 @@ const AdminPage: React.FC<any> = (props) => {
 
                     {editingItem ? (
                         <Card className="p-6">
-                            <form onSubmit={(e) => {e.preventDefault(); /* Logic to save text/skill */ setEditingItem(null);}} className="space-y-4">
-                                <MultilingualInput label="العنوان" value={editingItem.title || editingItem.name} name="title" onChange={(e, lang) => {
-                                    const field = editingItem.title ? 'title' : 'name';
-                                    setEditingItem({...editingItem, [field]: {...editingItem[field], [lang]: e.target.value}});
-                                }} />
-                                <div className="flex justify-end gap-2">
-                                    <Button variant="secondary" onClick={() => setEditingItem(null)}>إلغاء</Button>
-                                    <Button type="submit">حفظ التغييرات</Button>
-                                </div>
-                            </form>
+                            {activeContentType === 'texts' ? (
+                                <TextEditForm
+                                    text={editingItem}
+                                    skills={props.skills}
+                                    specializations={props.specializations}
+                                    onSave={handleSaveText}
+                                    onCancel={() => setEditingItem(null)}
+                                />
+                            ) : (
+                                <form onSubmit={(e) => { e.preventDefault(); /* Logic to save text/skill */ setEditingItem(null); }} className="space-y-4">
+                                    <MultilingualInput label="العنوان" value={editingItem.title || editingItem.name} name="title" onChange={(e, lang) => {
+                                        const field = editingItem.title ? 'title' : 'name';
+                                        setEditingItem({ ...editingItem, [field]: { ...editingItem[field], [lang]: e.target.value } });
+                                    }} />
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="secondary" onClick={() => setEditingItem(null)}>إلغاء</Button>
+                                        <Button type="submit">حفظ التغييرات</Button>
+                                    </div>
+                                </form>
+                            )}
                         </Card>
                     ) : (
                         <Card className="p-6">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="font-bold">قائمة العناصر</h3>
-                                <Button size="sm" onClick={() => setEditingItem({id: Date.now(), name: {ar:'',fr:''}, title: {ar:'',fr:''}})}>إضافة جديد</Button>
+                                <Button size="sm" onClick={() => {
+                                    if (activeContentType === 'texts') {
+                                        setEditingItem({
+                                            id: `txt-${Date.now()}`,
+                                            title: { ar: '', fr: '' },
+                                            specialization: { ar: '', fr: '' },
+                                            difficulty: 'متوسط',
+                                            learningObjectives: [],
+                                            skillIds: [],
+                                            content: { ar: '', fr: '' },
+                                            questions: []
+                                        });
+                                    } else {
+                                        setEditingItem({ id: Date.now(), name: { ar: '', fr: '' }, title: { ar: '', fr: '' } });
+                                    }
+                                }}>إضافة جديد</Button>
                             </div>
                             <div className="divide-y dark:divide-slate-700">
                                 {activeContentType === 'texts' && props.texts.map((t: any) => (
                                     <div key={t.id} className="py-3 flex justify-between items-center text-sm">
-                                        <span>{t.title[locale]}</span>
-                                        <div className="flex gap-2"><button onClick={() => setEditingItem(t)}><PencilIcon className="h-4 w-4" /></button></div>
+                                        <div className="flex flex-col">
+                                            <span className="font-medium text-slate-900 dark:text-slate-100">{t.title[locale]}</span>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{t.specialization[locale]}</span>
+                                                <DifficultyBadge level={t.difficulty} />
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setEditingItem(t)} className="p-2 hover:bg-slate-100 rounded-full"><PencilIcon className="h-4 w-4" /></button>
+                                            <button onClick={() => { if (confirm('هل أنت متأكد؟')) db.deleteText(t.id).then(() => window.location.reload()); }} className="p-2 hover:bg-red-50 text-red-500 rounded-full"><TrashIcon className="h-4 w-4" /></button>
+                                        </div>
                                     </div>
                                 ))}
                                 {activeContentType === 'specializations' && props.specializations.map((s: any) => (
@@ -251,7 +490,7 @@ const AdminPage: React.FC<any> = (props) => {
                         <Card className="p-6">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="font-bold">إدارة المتدربين الحالية</h3>
-                                <Button size="sm" onClick={() => setEditingItem({name:'', email:'', role:'متدرب', status:'نشط', mustChangePassword:true})}>
+                                <Button size="sm" onClick={() => setEditingItem({ name: '', email: '', role: 'متدرب', status: 'نشط', mustChangePassword: true })}>
                                     + متدرب جديد
                                 </Button>
                             </div>
@@ -296,13 +535,13 @@ const AdminPage: React.FC<any> = (props) => {
                                 <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
                                     <p className="text-xs text-slate-500 mb-1">نسبة التسجيل في "تدبير المقاولات"</p>
                                     <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                        <div className="bg-primary-500 h-full" style={{width: '65%'}}></div>
+                                        <div className="bg-primary-500 h-full" style={{ width: '65%' }}></div>
                                     </div>
                                 </div>
                                 <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
                                     <p className="text-xs text-slate-500 mb-1">نسبة التسجيل في "الكهرباء"</p>
                                     <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                        <div className="bg-blue-500 h-full" style={{width: '40%'}}></div>
+                                        <div className="bg-blue-500 h-full" style={{ width: '40%' }}></div>
                                     </div>
                                 </div>
                             </div>

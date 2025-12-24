@@ -6,6 +6,12 @@ export const initialTexts: TextData[] = [
         id: 'txt-1',
         title: { ar: 'المقاولات الصغرى والمتوسطة في المغرب', fr: 'PME au Maroc' },
         specialization: { ar: 'تدبير المقاولات', fr: 'Gestion' },
+        difficulty: 'متوسط',
+        learningObjectives: [
+            { ar: 'فهم دور المقاولات الصغرى والمتوسطة', fr: 'Comprendre le rôle des PME' },
+            { ar: 'تحليل النسيج المقاولاتي المغربي', fr: 'Analyser le tissu entrepreneurial marocain' }
+        ],
+        skillIds: [1],
         content: {
             ar: `يعتبر الباحثون والدارسون أن قضية تطوير وتنمية المقاولات الصغرى والمتوسطة تُعتبر إحدى الرهانات الكبرى الملقاة على كاهل صناع القرار. تلعب هذه المقاولات دوراً هاماً وحيوياً في النمو الاقتصادي، وخلق فرص الشغل، والتماسك الاجتماعي. وبالتركيز على المغرب، يتبين أن المقاولات الصغرى والمتوسطة تحتل مكانة هامة ضمن المنظومة الاقتصادية، فهي تمثل حوالي 95 في المائة من النسيج المقاولاتي المغربي.`,
             fr: `Les PME représentent environ 95% du tissu entrepreneurial marocain.`

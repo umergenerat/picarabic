@@ -4,19 +4,10 @@ import { supabase } from './supabaseClient';
 
 export const ADMIN_EMAIL = 'aitloutouaom@gmail.com';
 
-/**
- * تسجيل الدخول باستخدام Supabase Auth
- */
 export const signIn = async (email: string, password: string): Promise<User> => {
-    // Demo Mode: allow admin login if Supabase is not configured
     if (!supabase) {
         if (email === ADMIN_EMAIL && password === 'admin') {
-            return {
-                displayName: 'المدير (Demo)',
-                email: ADMIN_EMAIL,
-                photoURL: 'https://i.pravatar.cc/150?u=admin',
-                mustChangePassword: false
-            };
+            return { displayName: 'المدير (Demo)', email: ADMIN_EMAIL, photoURL: '', mustChangePassword: false };
         }
         throw new Error('login.error');
     }
@@ -28,86 +19,84 @@ export const signIn = async (email: string, password: string): Promise<User> => 
 
     if (error) throw new Error('login.error');
 
-    const user = data.user;
+    // Fetch profile data
+    const { data: profile } = await supabase.from('profiles').select('*').eq('email', email).single();
+
     return {
-        displayName: user.user_metadata?.display_name || user.email?.split('@')[0],
-        email: user.email || '',
-        photoURL: user.user_metadata?.photo_url || `https://i.pravatar.cc/150?u=${user.id}`,
-        mustChangePassword: user.user_metadata?.must_change_password || false
+        displayName: profile?.name || data.user.email?.split('@')[0],
+        email: data.user.email || '',
+        photoURL: `https://i.pravatar.cc/150?u=${data.user.id}`,
+        mustChangePassword: profile?.must_change_password || false
     };
 };
 
-/**
- * تسجيل الخروج
- */
 export const signOut = async (): Promise<void> => {
     if (!supabase) return;
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error("Error signing out:", error);
+    await supabase.auth.signOut();
 };
 
-/**
- * تغيير كلمة المرور للمستخدم الحالي
- */
 export const changePassword = async (currentPass: string, newPass: string, confirmPass: string): Promise<void> => {
     if (newPass !== confirmPass) throw new Error('changePassword.errorMatch');
     if (!supabase) throw new Error('Action not available in demo mode');
-    
     const { error } = await supabase.auth.updateUser({ password: newPass });
     if (error) throw new Error(error.message);
 };
 
-/**
- * فرض تغيير كلمة المرور عند أول دخول
- */
+// FIX: Implemented forceChangePassword to support password updates and profile synchronization.
 export const forceChangePassword = async (email: string, newPass: string, confirmPass: string): Promise<User> => {
     if (newPass !== confirmPass) throw new Error('changePassword.errorMatch');
-    if (!supabase) throw new Error('Action not available in demo mode');
     
-    const { data, error } = await supabase.auth.updateUser({ 
-        password: newPass,
-        data: { must_change_password: false }
-    });
+    if (!supabase) {
+        // Fallback for demo mode
+        return { displayName: email.split('@')[0], email, photoURL: '', mustChangePassword: false };
+    }
 
-    if (error) throw new Error(error.message);
+    // Update the password in Auth
+    const { data: authData, error: authError } = await supabase.auth.updateUser({ password: newPass });
+    if (authError) throw new Error(authError.message);
+
+    // Update the must_change_password flag in the profile
+    const { error: profileError } = await supabase.from('profiles').update({ must_change_password: false }).eq('email', email);
+    if (profileError) throw new Error(profileError.message);
+
+    // Fetch updated profile data
+    const { data: profile } = await supabase.from('profiles').select('*').eq('email', email).single();
 
     return {
-        displayName: data.user.user_metadata?.display_name,
-        email: data.user.email || '',
-        photoURL: data.user.user_metadata?.photo_url,
+        displayName: profile?.name || email.split('@')[0],
+        email: email,
+        photoURL: `https://i.pravatar.cc/150?u=${authData.user.id}`,
         mustChangePassword: false
     };
 };
 
-/**
- * جلب قائمة المستخدمين (للمدير)
- */
 export const getUsers = async (): Promise<PlatformUser[]> => {
-    if (!supabase) {
-        return [
-            { id: 1, name: 'أحمد العلمي', email: 'ahmed@example.com', phone: '0612345678', specialization: 'كهرباء الصيانة الصناعية', role: 'متدرب', status: 'نشط' },
-            { id: 2, name: 'سارة الإدريسي', email: 'sara@example.com', phone: '0687654321', specialization: 'المحاسبة والتدبير', role: 'متدرب', status: 'نشط' },
-            { id: 3, name: 'عمر أيت لوتو', email: ADMIN_EMAIL, phone: '0600000000', specialization: 'الإدارة', role: 'مدير', status: 'نشط' },
-        ];
-    }
-    const { data, error } = await supabase.from('profiles').select('*').order('id', { ascending: false });
+    if (!supabase) return [];
+    const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
 };
 
-/**
- * حفظ أو تحديث بيانات مستخدم
- */
 export const saveUser = async (user: PlatformUser): Promise<void> => {
     if (!supabase) return;
-    const { error } = await supabase.from('profiles').upsert(user);
+    
+    // In production, setting another user's password usually happens via a trigger or Edge Function.
+    // Here we ensure the profile data is synchronized.
+    const { error } = await supabase.from('profiles').upsert({
+        id: user.id || undefined, // Supabase uses UUID for ID if linked to Auth
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        specialization: user.specialization,
+        role: user.role,
+        status: user.status,
+        must_change_password: user.mustChangePassword || false
+    });
+    
     if (error) throw error;
 };
 
-/**
- * حذف مستخدم
- */
-export const deleteUser = async (id: number): Promise<void> => {
+export const deleteUser = async (id: any): Promise<void> => {
     if (!supabase) return;
     const { error } = await supabase.from('profiles').delete().eq('id', id);
     if (error) throw error;

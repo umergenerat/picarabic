@@ -2,11 +2,7 @@
 import { User, PlatformUser } from '../types';
 import { supabase } from './supabaseClient';
 
-const getAdminEmail = () => {
-    return import.meta.env.VITE_ADMIN_EMAIL || 'aitloutouaom@gmail.com';
-};
-
-export const ADMIN_EMAIL = getAdminEmail();
+export const ADMIN_EMAIL = 'aitloutouaom@gmail.com';
 
 /**
  * تسجيل الدخول باستخدام Supabase Auth
@@ -22,7 +18,7 @@ export const signIn = async (email: string, password: string): Promise<User> => 
                 mustChangePassword: false
             };
         }
-        throw new Error('Supabase is not configured. Use demo credentials (admin email + "admin" password) for testing.');
+        throw new Error('login.error');
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -30,10 +26,7 @@ export const signIn = async (email: string, password: string): Promise<User> => 
         password: password.trim(),
     });
 
-    if (error) {
-        console.error("Login error:", error);
-        throw new Error(error.message); // Return actual error message for debugging
-    }
+    if (error) throw new Error('login.error');
 
     const user = data.user;
     return {
@@ -59,22 +52,9 @@ export const signOut = async (): Promise<void> => {
 export const changePassword = async (currentPass: string, newPass: string, confirmPass: string): Promise<void> => {
     if (newPass !== confirmPass) throw new Error('changePassword.errorMatch');
     if (!supabase) throw new Error('Action not available in demo mode');
-
+    
     const { error } = await supabase.auth.updateUser({ password: newPass });
     if (error) throw new Error(error.message);
-};
-
-/**
- * إرسال رابط إعادة تعيين كلمة المرور عبر البريد الإلكتروني
- */
-export const resetPassword = async (email: string): Promise<void> => {
-    if (!supabase) throw new Error('resetPassword.notAvailable');
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
-    });
-
-    if (error) throw new Error('resetPassword.error');
 };
 
 /**
@@ -83,8 +63,8 @@ export const resetPassword = async (email: string): Promise<void> => {
 export const forceChangePassword = async (email: string, newPass: string, confirmPass: string): Promise<User> => {
     if (newPass !== confirmPass) throw new Error('changePassword.errorMatch');
     if (!supabase) throw new Error('Action not available in demo mode');
-
-    const { data, error } = await supabase.auth.updateUser({
+    
+    const { data, error } = await supabase.auth.updateUser({ 
         password: newPass,
         data: { must_change_password: false }
     });
@@ -99,38 +79,36 @@ export const forceChangePassword = async (email: string, newPass: string, confir
     };
 };
 
-// وظائف إدارة المستخدمين (للمدير)
-export const getUsers = async (): Promise<any[]> => {
-    if (!supabase) return [];
-    const { data, error } = await supabase.from('profiles').select('*');
+/**
+ * جلب قائمة المستخدمين (للمدير)
+ */
+export const getUsers = async (): Promise<PlatformUser[]> => {
+    if (!supabase) {
+        return [
+            { id: 1, name: 'أحمد العلمي', email: 'ahmed@example.com', phone: '0612345678', specialization: 'كهرباء الصيانة الصناعية', role: 'متدرب', status: 'نشط' },
+            { id: 2, name: 'سارة الإدريسي', email: 'sara@example.com', phone: '0687654321', specialization: 'المحاسبة والتدبير', role: 'متدرب', status: 'نشط' },
+            { id: 3, name: 'عمر أيت لوتو', email: ADMIN_EMAIL, phone: '0600000000', specialization: 'الإدارة', role: 'مدير', status: 'نشط' },
+        ];
+    }
+    const { data, error } = await supabase.from('profiles').select('*').order('id', { ascending: false });
     if (error) throw error;
-    return data;
+    return data || [];
 };
 
-// FIX: Added addUser function to insert a new user profile into Supabase.
-export const addUser = async (userData: Omit<PlatformUser, 'id'>): Promise<void> => {
+/**
+ * حفظ أو تحديث بيانات مستخدم
+ */
+export const saveUser = async (user: PlatformUser): Promise<void> => {
     if (!supabase) return;
-    const { error } = await supabase.from('profiles').insert(userData);
+    const { error } = await supabase.from('profiles').upsert(user);
     if (error) throw error;
 };
 
-// FIX: Added updateUser function to update an existing user profile in Supabase.
-export const updateUser = async (userData: PlatformUser): Promise<void> => {
-    if (!supabase) return;
-    const { error } = await supabase.from('profiles').update(userData).eq('id', userData.id);
-    if (error) throw error;
-};
-
-// FIX: Added deleteUser function to remove a user profile from Supabase.
+/**
+ * حذف مستخدم
+ */
 export const deleteUser = async (id: number): Promise<void> => {
     if (!supabase) return;
     const { error } = await supabase.from('profiles').delete().eq('id', id);
-    if (error) throw error;
-};
-
-// FIX: Added deleteMultipleUsers function to remove multiple user profiles from Supabase.
-export const deleteMultipleUsers = async (ids: number[]): Promise<void> => {
-    if (!supabase) return;
-    const { error } = await supabase.from('profiles').delete().in('id', ids);
     if (error) throw error;
 };

@@ -46,7 +46,7 @@ export const SpeakerWaveIcon: React.FC<{ className?: string }> = ({ className })
 
 export const LinkIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 005.656 0l4-4a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
     </svg>
 );
 
@@ -68,8 +68,6 @@ export const UsersIcon: React.FC<{ className?: string }> = ({ className }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-4.663M5.375 12.553a2.625 2.625 0 115.25 0 2.625 2.625 0 01-5.25 0zM16.5 12.553a2.625 2.625 0 115.25 0 2.625 2.625 0 01-5.25 0z" />
     </svg>
 );
-
-// --- Fixed Icons (Added missing icons) ---
 
 export const Cog6ToothIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
@@ -104,7 +102,7 @@ export const SunIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 export const MoonIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
     </svg>
 );
 
@@ -186,6 +184,12 @@ export const EnvelopeIcon: React.FC<{ className?: string }> = ({ className }) =>
     </svg>
 );
 
+export const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+);
+
 export const iconMap: { [key: string]: React.FC<{ className?: string }> } = {
     HomeIcon,
     BookOpenIcon,
@@ -216,5 +220,6 @@ export const iconMap: { [key: string]: React.FC<{ className?: string }> } = {
     ArrowUpTrayIcon,
     MagnifyingGlassIcon,
     PlusCircleIcon,
-    EnvelopeIcon
+    EnvelopeIcon,
+    CheckIcon
 };

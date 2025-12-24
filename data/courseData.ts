@@ -38,19 +38,6 @@ export const initialTexts: TextData[] = [
             { id: 'q2-1', text: { ar: 'كيف يمكن أن يؤدي "التحيز التصميمي" إلى التمييز المهني؟', fr: 'Comment le biais mène à la discrimination ?' }, type: 'تحليل' },
             { id: 'q2-2', text: { ar: 'في رأيك، ما هي الإجراءات التقنية للحد من تحيز الخوارزميات؟', fr: 'Actions pour réduire le biais ?' }, type: 'مناقشة' }
         ]
-    },
-    {
-        id: 'txt-3',
-        title: { ar: 'اقتصاد المعرفة والتنمية', fr: 'Économie de la connaissance' },
-        specialization: { ar: 'التنمية البشرية', fr: 'Développement' },
-        content: {
-            ar: `اقتصاد المعرفة هو نظام اقتصادي يعتمد فيه إنتاج السلع والخدمات بشكل أساسي على المعرفة، ويستند إلى الإبداع والابتكار واستخدام التكنولوجيات المتقدمة. لقد أصبح هذا النظام هو السائد في العالم اليوم، حيث يمثل أكثر من 70% من الناتج المحلي الإجمالي العالمي. المعرفة هي حجر الزاوية في التنمية البشرية المستدامة.`,
-            fr: `L'économie du savoir repose sur la créativité et l'innovation, représentant plus de 70% du PIB mondial.`
-        },
-        questions: [
-            { id: 'q3-1', text: { ar: 'بماذا يتميز اقتصاد المعرفة عن الاقتصاد التقليدي؟', fr: 'Différence entre économie du savoir et traditionnelle ?' }, type: 'مفاهيم' },
-            { id: 'q3-2', text: { ar: 'ناقش دور التربية والتعليم في بناء مجتمع المعلومات.', fr: 'Rôle de l\'éducation.' }, type: 'تحليل' }
-        ]
     }
 ];
 
@@ -73,18 +60,6 @@ export const initialSkills: Skill[] = [
         title: { ar: 'كتابة التقارير التقنية', fr: 'Rédaction de Rapports' },
         description: { ar: 'صياغة وثائق مكتوبة لتسجيل المعلومات والنتائج المتعلقة بمشروع أو عطل تقني بدقة ووضوح.', fr: 'Rédiger des documents techniques clairs.' },
         iconName: 'DocumentTextIcon',
-    },
-    {
-        id: 4,
-        title: { ar: 'إدارة الوقت (نظرية الضفدع)', fr: 'Gestion du Temps' },
-        description: { ar: 'ترتيب الأولويات وإنجاز المهام الصعبة أولاً لزيادة الإنتاجية وتقليل التوتر.', fr: 'Prioriser les tâches efficacement.' },
-        iconName: 'ChartPieIcon',
-    },
-    {
-        id: 5,
-        title: { ar: 'تحرير عقد العمل والـ CV', fr: 'Contrat & CV' },
-        description: { ar: 'القدرة على كتابة سيرة ذاتية احترافية وفهم بنود وشروط عقود العمل القانونية.', fr: 'Rédiger un CV et comprendre les contrats.' },
-        iconName: 'AcademicCapIcon',
     }
 ];
 
@@ -101,18 +76,6 @@ export const initialTeams: Team[] = [
         presentationTitle: { ar: 'آفاق الطاقات المتجددة في منطقة طاطا', fr: "Énergies renouvelables à Tata" },
         dueDate: '2025-05-20',
         teamLeader: 'ياسين'
-    },
-    { 
-        id: 2, 
-        name: { ar: 'رواد الميكانيك الحديثة', fr: 'Pionniers Mécanique' }, 
-        specialization: { ar: 'ميكانيكا السيارات', fr: 'Mécanique Auto' }, 
-        members: ['حمزة', 'سارة', 'كريم'], 
-        presentation: null, 
-        presentationData: null,
-        videoSummaryUrl: null,
-        presentationTitle: { ar: 'تحديات السيارات ذاتية القيادة في المغرب', fr: "Voitures autonomes au Maroc" },
-        dueDate: '2025-05-25',
-        teamLeader: 'حمزة'
     }
 ];
 
@@ -131,15 +94,20 @@ export const initialTestContexts: TestContext[] = [
 // --- المصادر التعليمية الإضافية ---
 export const initialResources: Resource[] = [
     { id: 'res1', title: { ar: 'دليل كتابة التقارير للمتدربين', fr: 'Guide de rédaction' }, type: { ar: 'PDF تعليمي', fr: 'Support PDF' }, link: '#' },
-    { id: 'res2', title: { ar: 'فيديو: مهارات التواصل غير اللفظي', fr: 'Communication non-verbale' }, type: { ar: 'فيديو', fr: 'Vidéo' }, link: '#' },
-    { id: 'res3', title: { ar: 'نموذج عقد عمل (ANAPEC)', fr: 'Modèle Contrat' }, type: { ar: 'نموذج', fr: 'Modèle' }, link: '#' },
 ];
 
 export const initialSpecializations: Specialization[] = [
-    { id: 'spec-1', name: { ar: 'كهرباء الصيانة الصناعية', fr: 'Électricité' }, traineeCount: 40 },
-    { id: 'spec-2', name: { ar: 'إصلاح مركبات الشحن الثقيل', fr: 'Mécanique Poids Lourd' }, traineeCount: 35 },
-    { id: 'spec-3', name: { ar: 'الأنظمة التلقائية', fr: 'Automatisme' }, traineeCount: 25 },
-    { id: 'spec-4', name: { ar: 'المحاسبة والتدبير', fr: 'Comptabilité' }, traineeCount: 30 },
+    { id: 'spec-1', name: { ar: 'تدبير المقاولات', fr: 'Gestion des Entreprises' }, traineeCount: 0 },
+    { id: 'spec-2', name: { ar: 'التقني المتخصص في تدبير المقاولة', fr: 'TS Gestion des Entreprises' }, traineeCount: 0 },
+    { id: 'spec-3', name: { ar: 'الإدارة الفندقية', fr: 'Management Hôtelier' }, traineeCount: 0 },
+    { id: 'spec-4', name: { ar: 'المساعد الإداري', fr: 'Assistant Administratif' }, traineeCount: 0 },
+    { id: 'spec-5', name: { ar: 'كهرباء الإنشاءات', fr: 'Électricité de Bâtiment' }, traineeCount: 0 },
+    { id: 'spec-6', name: { ar: 'المطعمة', fr: 'Restauration' }, traineeCount: 0 },
+    { id: 'spec-7', name: { ar: 'الخياطة', fr: 'Couture' }, traineeCount: 0 },
+    { id: 'spec-8', name: { ar: 'إصلاح المركبات السيارة', fr: 'Réparation Automobile' }, traineeCount: 0 },
+    { id: 'spec-9', name: { ar: 'النجارة', fr: 'Menuiserie' }, traineeCount: 0 },
+    { id: 'spec-10', name: { ar: 'كهرباء الصيانة الصناعية', fr: 'Électricité Industrielle' }, traineeCount: 0 },
+    { id: 'spec-11', name: { ar: 'إصلاح مركبات الشحن الثقيل', fr: 'Mécanique Poids Lourd' }, traineeCount: 0 },
 ];
 
 export const initialProgressData: ProgressDataPoint[] = [

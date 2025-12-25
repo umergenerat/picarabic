@@ -186,6 +186,7 @@ const App: React.FC = () => {
                 logoSrc={logoSrc} setLogoSrc={setLogoSrc}
                 progressData={studentProgressData}
                 setProgressData={setStudentProgressData}
+                refreshData={loadData}
             /> : <HomePage />;
             default: return <HomePage />;
         }

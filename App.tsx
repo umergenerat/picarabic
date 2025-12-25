@@ -67,14 +67,18 @@ const App: React.FC = () => {
             if (mounted) {
                 if (session) {
                     const u = session.user;
-                    setUser({
+                    const loggedInUser: User = {
+                        id: u.id,
                         displayName: u.user_metadata?.display_name || u.email?.split('@')[0] || 'User',
                         email: u.email || '',
                         photoURL: u.user_metadata?.photo_url || `https://i.pravatar.cc/150?u=${u.id}`,
                         mustChangePassword: u.user_metadata?.must_change_password
-                    });
+                    };
+                    setUser(loggedInUser);
+                    loadData(loggedInUser.id);
+                } else {
+                    loadData();
                 }
-                loadData();
             }
         });
 
@@ -82,14 +86,19 @@ const App: React.FC = () => {
             if (mounted) {
                 if (session) {
                     const u = session.user;
-                    setUser({
+                    const loggedInUser: User = {
+                        id: u.id,
                         displayName: u.user_metadata?.display_name,
                         email: u.email || '',
                         photoURL: u.user_metadata?.photo_url,
                         mustChangePassword: u.user_metadata?.must_change_password
-                    });
+                    };
+                    setUser(loggedInUser);
+                    loadData(loggedInUser.id);
                 } else {
                     setUser(null);
+                    setCompletedSkills([]);
+                    loadData();
                 }
             }
         });
@@ -100,10 +109,10 @@ const App: React.FC = () => {
         };
     }, []);
 
-    const loadData = async () => {
+    const loadData = async (userId?: string) => {
         setIsLoading(true);
         try {
-            const [t, s, tm, rc, sp, pd, cc, tc] = await Promise.all([
+            const [t, s, tm, rc, sp, pd, cc, tc, cs] = await Promise.all([
                 db.getTexts(),
                 db.getSkills(),
                 db.getTeams(),
@@ -111,7 +120,8 @@ const App: React.FC = () => {
                 db.getSpecializations(),
                 db.getProgressData(),
                 db.getChatChannels(),
-                db.getTestContexts()
+                db.getTestContexts(),
+                userId ? db.getCompletedSkills(userId) : Promise.resolve([])
             ]);
             setTexts(t);
             setSkills(s);
@@ -121,6 +131,7 @@ const App: React.FC = () => {
             setStudentProgressData(pd);
             setChatChannels(cc);
             setTestContexts(tc);
+            setCompletedSkills(cs);
         } catch (err) {
             console.error("Error loading data:", err);
         } finally {
@@ -146,6 +157,7 @@ const App: React.FC = () => {
                 if (loggedInUser.email === ADMIN_EMAIL) {
                     setActivePage('admin');
                 }
+                loadData(loggedInUser.id);
             }
         } catch (error: any) {
             console.error("Login attempt failed:", error);
@@ -169,7 +181,7 @@ const App: React.FC = () => {
         switch (activePage) {
             case 'home': return <HomePage />;
             case 'texts': return user ? <TextsSection texts={texts} skills={skills} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'skills': return user ? <SkillsSection skills={skills} completedSkills={completedSkills} setCompletedSkills={setCompletedSkills} specializations={specializations} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'skills': return user ? <SkillsSection skills={skills} completedSkills={completedSkills} setCompletedSkills={setCompletedSkills} specializations={specializations} user={user} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
             case 'presentations': return <PresentationsSection teams={teams} setTeams={setTeams} user={user} isAdmin={isAdmin} />;
             case 'tests': return user ? <TestsSection testContexts={testContexts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
             case 'chat': return <ChatSection user={user} chatChannels={chatChannels} setChatChannels={setChatChannels} />;

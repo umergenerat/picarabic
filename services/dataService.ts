@@ -11,12 +11,27 @@ export const getSkills = async (): Promise<Skill[]> => {
     if (!isSupabaseReady()) return initialData.initialSkills;
     const { data, error } = await supabase!.from('skills').select('*').order('id', { ascending: true });
     if (error) throw error;
-    return data || [];
+
+    // Map snake_case from DB to camelCase for frontend
+    return (data || []).map((skill: any) => ({
+        ...skill,
+        iconName: skill.iconName || skill.icon_name
+    }));
 };
 
 export const saveSkills = async (skills: Skill[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('skills').upsert(skills);
+
+    // Map camelCase for frontend to snake_case for DB
+    const skillsToSave = skills.map(skill => {
+        const { iconName, ...rest } = skill;
+        return {
+            ...rest,
+            icon_name: iconName
+        };
+    });
+
+    const { error } = await supabase!.from('skills').upsert(skillsToSave);
     if (error) throw error;
 };
 
@@ -111,12 +126,30 @@ export const getChatChannels = async (): Promise<ChatChannel[]> => {
     if (!isSupabaseReady()) return initialData.initialChatChannels;
     const { data, error } = await supabase!.from('chat_channels').select('*');
     if (error) throw error;
-    return data || [];
+
+    // Map snake_case to camelCase
+    return (data || []).map((channel: any) => ({
+        ...channel,
+        iconName: channel.iconName || channel.icon_name,
+        defaultSystemPrompt: channel.default_system_prompt,
+        systemPrompt: channel.system_prompt
+    }));
 };
 
 export const saveChatChannels = async (channels: ChatChannel[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('chat_channels').upsert(channels);
+
+    const channelsToSave = channels.map(channel => {
+        const { iconName, defaultSystemPrompt, systemPrompt, ...rest } = channel;
+        return {
+            ...rest,
+            icon_name: iconName,
+            default_system_prompt: defaultSystemPrompt,
+            system_prompt: systemPrompt
+        };
+    });
+
+    const { error } = await supabase!.from('chat_channels').upsert(channelsToSave);
     if (error) throw error;
 };
 

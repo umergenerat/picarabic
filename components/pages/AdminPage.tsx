@@ -319,50 +319,66 @@ const SkillEditForm: React.FC<{ skill: Skill; onSave: (s: Skill) => void; onCanc
     const { t, locale } = useI18n();
     const [formData, setFormData] = useState<Skill>(skill);
 
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave(formData);
+    };
+
     return (
-        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-6">
-            <h3 className="text-xl font-bold border-b pb-2">{formData.id && typeof formData.id === 'number' && formData.id < 1000000000 ? 'تعديل المهارة' : 'إضافة مهارة جديدة'}</h3>
-
-            <MultilingualInput
-                label="عنوان المهارة"
-                value={formData.title}
-                name="title"
-                onChange={(e, lang) => setFormData({ ...formData, title: { ...formData.title, [lang]: e.target.value } })}
-            />
-
-            <MultilingualInput
-                label="وصف المهارة"
-                type="textarea"
-                value={formData.description}
-                name="description"
-                onChange={(e, lang) => setFormData({ ...formData, description: { ...formData.description, [lang]: e.target.value } })}
-            />
-
-            <div>
-                <label className="block text-sm font-medium mb-3 text-slate-700 dark:text-slate-300">أيقونة المهارة</label>
-                <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 max-h-48 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                    {Object.keys(iconMap).map(iconName => {
-                        const IconComponent = iconMap[iconName];
-                        return (
-                            <button
-                                key={iconName}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, icon_name: iconName } as any)}
-                                className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 ${(formData as any).icon_name === iconName || formData.iconName === iconName
-                                        ? 'bg-primary-100 text-primary-600 ring-2 ring-primary-500 shadow-sm'
-                                        : 'bg-white dark:bg-slate-700 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600 hover:text-slate-600'
-                                    }`}
-                            >
-                                <IconComponent className="h-6 w-6" />
-                            </button>
-                        );
-                    })}
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex justify-between items-center border-b pb-4">
+                <h3 className="text-xl font-bold">
+                    {formData.id && typeof formData.id === 'number' && formData.id < 1000000000
+                        ? 'تعديل المهارة'
+                        : 'إضافة مهارة جديدة'}
+                </h3>
+                <div className="flex gap-2">
+                    <Button variant="secondary" onClick={onCancel} size="sm">إلغاء</Button>
+                    <Button type="submit" size="sm">حفظ المهارة</Button>
                 </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-6 border-t">
-                <Button variant="secondary" onClick={onCancel}>إلغاء</Button>
-                <Button type="submit">حفظ المهارة</Button>
+            <div className="grid grid-cols-1 gap-6">
+                <MultilingualInput
+                    label="عنوان المهارة"
+                    value={formData.title}
+                    name="title"
+                    onChange={(e, lang) => setFormData({ ...formData, title: { ...formData.title, [lang]: e.target.value } })}
+                />
+
+                <MultilingualInput
+                    label="وصف المهارة"
+                    type="textarea"
+                    value={formData.description}
+                    name="description"
+                    onChange={(e, lang) => setFormData({ ...formData, description: { ...formData.description, [lang]: e.target.value } })}
+                />
+
+                <div>
+                    <label className="block text-sm font-medium mb-3 text-slate-700 dark:text-slate-300">أيقونة المهارة</label>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 max-h-60 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+                        {Object.keys(iconMap).map(iconName => {
+                            const IconComponent = iconMap[iconName];
+                            const isSelected = formData.iconName === iconName;
+                            return (
+                                <button
+                                    key={iconName}
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, iconName })}
+                                    className={`group flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 ${isSelected
+                                            ? 'bg-primary-500 text-white ring-2 ring-primary-500 shadow-md transform scale-105'
+                                            : 'bg-white dark:bg-slate-700 text-slate-400 hover:bg-primary-50 dark:hover:bg-slate-600 hover:text-primary-600'
+                                        }`}
+                                >
+                                    <IconComponent className="h-6 w-6" />
+                                    <span className={`text-[8px] mt-1 truncate w-full text-center ${isSelected ? 'text-white' : 'text-slate-400 opacity-0 group-hover:opacity-100'}`}>
+                                        {iconName.replace('Icon', '')}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         </form>
     );
@@ -424,20 +440,17 @@ const AdminPage: React.FC<any> = (props) => {
     const handleSaveSkill = async (skill: Skill) => {
         setIsLoading(true);
         try {
-            // Mapping for database consistency (iconName vs icon_name)
-            const skillToSave = {
-                ...skill,
-                icon_name: (skill as any).icon_name || skill.iconName
-            };
-
             const updatedSkills = props.skills.some((s: any) => s.id === skill.id)
-                ? props.skills.map((s: any) => s.id === skill.id ? skillToSave : s)
-                : [...props.skills, skillToSave];
+                ? props.skills.map((s: any) => s.id === skill.id ? skill : s)
+                : [...props.skills, skill];
 
             await db.saveSkills(updatedSkills);
             setEditingItem(null);
             if (props.refreshData) props.refreshData();
-        } catch (e) { alert("حدث خطأ أثناء حفظ المهارة"); }
+        } catch (e) {
+            console.error(e);
+            alert("حدث خطأ أثناء حفظ المهارة");
+        }
         finally { setIsLoading(false); }
     };
 
@@ -569,19 +582,31 @@ const AdminPage: React.FC<any> = (props) => {
                                     </div>
                                 ))}
                                 {activeContentType === 'skills' && props.skills.map((s: any) => (
-                                    <div key={s.id} className="py-3 flex justify-between items-center text-sm">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-primary-600">
-                                                {iconMap[s.icon_name || s.iconName] && React.createElement(iconMap[s.icon_name || s.iconName], { className: "h-5 w-5" })}
+                                    <div key={s.id} className="py-4 flex justify-between items-center text-sm border-b last:border-0 border-slate-100 dark:border-slate-700/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors px-2 rounded-lg">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-primary-50 dark:bg-slate-700 text-primary-600 rounded-xl shadow-sm">
+                                                {iconMap[s.iconName] && React.createElement(iconMap[s.iconName], { className: "h-6 w-6" })}
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="font-medium text-slate-900 dark:text-slate-100">{s.title[locale]}</span>
-                                                <span className="text-[10px] text-slate-500 line-clamp-1 max-w-[300px]">{s.description[locale]}</span>
+                                                <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{s.title[locale]}</span>
+                                                <span className="text-xs text-slate-500 line-clamp-1 max-w-[400px] mt-0.5">{s.description[locale]}</span>
                                             </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setEditingItem(s)} className="p-2 hover:bg-slate-100 rounded-full"><PencilIcon className="h-4 w-4" /></button>
-                                            <button onClick={() => handleDeleteSkill(s.id)} className="p-2 hover:bg-red-50 text-red-500 rounded-full"><TrashIcon className="h-4 w-4" /></button>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => setEditingItem(s)}
+                                                className="p-2 hover:bg-primary-100 hover:text-primary-600 text-slate-400 rounded-lg transition-colors"
+                                                title="تعديل"
+                                            >
+                                                <PencilIcon className="h-5 w-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteSkill(s.id)}
+                                                className="p-2 hover:bg-red-100 hover:text-red-600 text-slate-400 rounded-lg transition-colors"
+                                                title="حذف"
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}

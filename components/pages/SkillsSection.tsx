@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Skill, Specialization } from '../../types';
+import { Skill, Specialization, User } from '../../types';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import Spinner from '../common/Spinner';
@@ -11,7 +11,7 @@ interface SkillPracticeModalProps {
     skill: Skill;
     specialization: string;
     onClose: () => void;
-    onComplete: (skillId: number) => void;
+    onComplete: (skillId: number) => Promise<void>;
 }
 
 const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, specialization, onClose, onComplete }) => {
@@ -40,7 +40,7 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
         };
         fetchScenario();
     }, [skill, specialization, locale, t]);
-    
+
     const handleEvaluate = async () => {
         if (!userAnswer.trim()) return;
         setIsEvaluating(true);
@@ -56,8 +56,15 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
         }
     };
 
-    const handleComplete = () => {
-        onComplete(skill.id);
+    const handleComplete = async () => {
+        setIsEvaluating(true);
+        try {
+            await onComplete(skill.id);
+        } catch (err) {
+            setError(t('skills.errorSavingProgress'));
+        } finally {
+            setIsEvaluating(false);
+        }
     };
 
     return (
@@ -75,7 +82,7 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                 <div className="p-6 space-y-4 overflow-y-auto flex-1">
                     {isLoadingScenario && <Spinner />}
                     {error && !scenario && <p className="text-red-500 text-center">{error}</p>}
-                    
+
                     {scenario && (
                         <>
                             <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
@@ -83,7 +90,7 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                                 <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{scenario}</p>
                                 <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap mt-3 font-semibold">{question}</p>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skills.yourResponse')}</label>
                                 <textarea
@@ -101,14 +108,14 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                                     {t('skills.submitForFeedback')}
                                 </Button>
                             )}
-                            
-                            {isEvaluating && <Spinner size="sm"/>}
+
+                            {isEvaluating && <Spinner size="sm" />}
                             {error && feedback === '' && <p className="text-red-500 mt-2">{error}</p>}
 
                             {feedback && (
                                 <div className="mt-4 p-4 border-s-4 rounded-md bg-green-50 dark:bg-slate-800 border-green-500">
                                     <div className="flex items-center gap-2">
-                                        <LightBulbIcon className="h-6 w-6 text-green-500"/>
+                                        <LightBulbIcon className="h-6 w-6 text-green-500" />
                                         <h5 className="font-bold text-green-800 dark:text-green-300">{t('skills.aiFeedback')}</h5>
                                     </div>
                                     <p className="text-slate-700 dark:text-slate-300 mt-2 whitespace-pre-wrap">{feedback}</p>
@@ -180,8 +187,8 @@ const SkillCard: React.FC<SkillCardProps> = ({ skill, isCompleted, onPractice })
             <div className="mt-auto">
                 {isCompleted ? (
                     <div className="flex items-center justify-center gap-2 p-2 rounded-md bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 font-semibold">
-                       <CheckCircleIcon className="h-5 w-5" />
-                       <span>{t('skills.completed')}</span>
+                        <CheckCircleIcon className="h-5 w-5" />
+                        <span>{t('skills.completed')}</span>
                     </div>
                 ) : (
                     <Button onClick={onPractice} className="w-full">
@@ -194,13 +201,13 @@ const SkillCard: React.FC<SkillCardProps> = ({ skill, isCompleted, onPractice })
 };
 
 interface SkillsSectionProps {
-    skills: Skill[];
     completedSkills: number[];
     setCompletedSkills: React.Dispatch<React.SetStateAction<number[]>>;
     specializations: Specialization[];
+    user: User | null;
 }
 
-const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, setCompletedSkills, specializations }) => {
+const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, setCompletedSkills, specializations, user }) => {
     const { t } = useI18n();
     const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
     const [skillForPractice, setSkillForPractice] = useState<Skill | null>(null);
@@ -212,7 +219,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, 
         setSkillForPractice(skill);
         setIsSpecializationModalOpen(true);
     };
-    
+
     const handleStartPracticeWithSpecialization = (specialization: string) => {
         if (skillForPractice) {
             setSelectedSpecialization(specialization);
@@ -227,9 +234,16 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, 
         setSelectedSpecialization('');
     };
 
-    const handleCompleteSkill = (skillId: number) => {
-        if (!completedSkills.includes(skillId)) {
-            setCompletedSkills(prev => [...prev, skillId]);
+    const handleCompleteSkill = async (skillId: number) => {
+        if (!completedSkills.includes(skillId) && user) {
+            try {
+                const { saveCompletedSkill } = await import('../../services/dataService');
+                await saveCompletedSkill(user.id, skillId);
+                setCompletedSkills(prev => [...prev, skillId]);
+            } catch (err) {
+                console.error("Failed to save completed skill:", err);
+                throw err;
+            }
         }
         setSelectedSkill(null);
         setSelectedSpecialization('');
@@ -240,9 +254,9 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, 
             <h2 className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">{t('skills.title')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {skills.map(skill => (
-                    <SkillCard 
-                        key={skill.id} 
-                        skill={skill} 
+                    <SkillCard
+                        key={skill.id}
+                        skill={skill}
                         isCompleted={completedSkills.includes(skill.id)}
                         onPractice={() => handlePractice(skill)}
                     />
@@ -250,7 +264,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, 
             </div>
 
             {isSpecializationModalOpen && (
-                <SpecializationSelectionModal 
+                <SpecializationSelectionModal
                     specializations={specializations}
                     onSelect={handleStartPracticeWithSpecialization}
                     onClose={() => setIsSpecializationModalOpen(false)}
@@ -258,7 +272,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, 
             )}
 
             {selectedSkill && selectedSpecialization && (
-                <SkillPracticeModal 
+                <SkillPracticeModal
                     skill={selectedSkill}
                     specialization={selectedSpecialization}
                     onClose={handleCloseModal}

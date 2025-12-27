@@ -24,15 +24,26 @@ export const saveSkills = async (skills: Skill[]) => {
 
     // Map camelCase for frontend to snake_case for DB
     const skillsToSave = skills.map(skill => {
-        const { iconName, ...rest } = skill;
         return {
-            ...rest,
-            icon_name: iconName
+            id: skill.id,
+            title: skill.title,
+            description: skill.description,
+            icon_name: skill.iconName
         };
     });
 
+    console.log('Attempting to save skills:', skillsToSave);
+
     const { error } = await supabase!.from('skills').upsert(skillsToSave);
-    if (error) throw error;
+    if (error) {
+        console.error('Detailed Supabase Error (Skills):', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
+        throw error;
+    }
 };
 
 export const deleteSkill = async (id: number) => {
@@ -58,16 +69,31 @@ export const saveTexts = async (texts: TextData[]) => {
     if (!isSupabaseReady()) return;
 
     const textsToSave = texts.map(text => {
-        const { learningObjectives, skillIds, ...rest } = text;
+        // Explicitly pick fields to avoid sending extra frontend fields
         return {
-            ...rest,
-            learning_objectives: learningObjectives,
-            skill_ids: skillIds
+            id: text.id,
+            title: text.title,
+            specialization: text.specialization,
+            content: text.content,
+            questions: text.questions || [],
+            difficulty: text.difficulty || 'متوسط',
+            learning_objectives: text.learningObjectives || [],
+            skill_ids: text.skillIds || []
         };
     });
 
+    console.log('Attempting to save texts:', textsToSave);
+
     const { error } = await supabase!.from('texts').upsert(textsToSave);
-    if (error) throw error;
+    if (error) {
+        console.error('Detailed Supabase Error (Texts):', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
+        throw error;
+    }
 };
 
 export const deleteText = async (id: string) => {
@@ -86,8 +112,34 @@ export const getTeams = async (): Promise<Team[]> => {
 
 export const saveTeams = async (teams: Team[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('teams').upsert(teams);
-    if (error) throw error;
+
+    const teamsToSave = teams.map(team => {
+        return {
+            id: team.id,
+            name: team.name,
+            specialization: team.specialization,
+            members: team.members,
+            presentation: team.presentation,
+            presentation_data: team.presentationData,
+            video_summary_url: team.videoSummaryUrl,
+            presentation_title: team.presentationTitle,
+            due_date: team.dueDate,
+            team_leader: team.teamLeader
+        };
+    });
+
+    console.log('Attempting to save teams:', teamsToSave);
+
+    const { error } = await supabase!.from('teams').upsert(teamsToSave);
+    if (error) {
+        console.error('Detailed Supabase Error (Teams):', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
+        throw error;
+    }
 };
 
 export const deleteTeam = async (id: number) => {
@@ -106,8 +158,28 @@ export const getResources = async (): Promise<Resource[]> => {
 
 export const saveResources = async (resources: Resource[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('resources').upsert(resources);
-    if (error) throw error;
+
+    const resourcesToSave = resources.map(res => {
+        return {
+            id: res.id,
+            title: res.title,
+            type: res.type,
+            link: res.link
+        };
+    });
+
+    console.log('Attempting to save resources:', resourcesToSave);
+
+    const { error } = await supabase!.from('resources').upsert(resourcesToSave);
+    if (error) {
+        console.error('Detailed Supabase Error (Resources):', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
+        throw error;
+    }
 };
 
 export const deleteResource = async (id: string) => {
@@ -182,17 +254,28 @@ export const saveChatChannels = async (channels: ChatChannel[]) => {
     if (!isSupabaseReady()) return;
 
     const channelsToSave = channels.map(channel => {
-        const { iconName, defaultSystemPrompt, systemPrompt, ...rest } = channel;
         return {
-            ...rest,
-            icon_name: iconName,
-            default_system_prompt: defaultSystemPrompt,
-            system_prompt: systemPrompt
+            id: channel.id,
+            name: channel.name,
+            icon_name: channel.iconName,
+            default_system_prompt: channel.defaultSystemPrompt,
+            system_prompt: channel.systemPrompt,
+            model: channel.model
         };
     });
 
+    console.log('Attempting to save chat channels:', channelsToSave);
+
     const { error } = await supabase!.from('chat_channels').upsert(channelsToSave);
-    if (error) throw error;
+    if (error) {
+        console.error('Detailed Supabase Error (ChatChannels):', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
+        throw error;
+    }
 };
 
 export const deleteChatChannel = async (id: string) => {
@@ -233,8 +316,27 @@ export const getTestContexts = async (): Promise<TestContext[]> => {
 
 export const saveTestContexts = async (contexts: TestContext[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('test_contexts').upsert(contexts);
-    if (error) throw error;
+
+    const contextsToSave = contexts.map(ctx => {
+        return {
+            id: ctx.id,
+            title: ctx.title,
+            content: ctx.content
+        };
+    });
+
+    console.log('Attempting to save test contexts:', contextsToSave);
+
+    const { error } = await supabase!.from('test_contexts').upsert(contextsToSave);
+    if (error) {
+        console.error('Detailed Supabase Error (TestContexts):', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
+        throw error;
+    }
 };
 
 export const deleteTestContext = async (id: string) => {

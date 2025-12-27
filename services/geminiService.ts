@@ -43,14 +43,15 @@ export const decodeAudioData = async (
 export const textToSpeech = async (text: string): Promise<string> => {
     try {
         const ai = getAiClient();
+        console.log('TTS request for:', text.substring(0, 20) + '...');
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-preview-tts",
+            model: "gemini-1.5-flash",
             contents: [{ parts: [{ text: `انطق النص التالي بوضوح وبلغة عربية فصحى: ${text}` }] }],
             config: {
                 responseModalities: [Modality.AUDIO],
                 speechConfig: {
                     voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Kore' }, // 'Kore' is excellent for clear Arabic pronunciation
+                        prebuiltVoiceConfig: { voiceName: 'Kore' },
                     },
                 },
             },
@@ -101,7 +102,13 @@ export const generateQuiz = async (context: string): Promise<QuizQuestion[]> => 
                 responseSchema: questionGenerationSchema
             }
         });
-        return JSON.parse(response.text.trim());
+
+        // Robust parsing
+        let text = String(response.text || '').trim();
+        if (text.startsWith('```')) {
+            text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+        }
+        return JSON.parse(text);
     } catch (error: any) {
         console.error("Error generating quiz:", error);
         throw new Error(error.message || "فشل في إنشاء الاختبار.");
@@ -147,7 +154,14 @@ export const generateSkillScenario = async (skillTitle: string, skillDescription
                 responseSchema: skillScenarioSchema
             }
         });
-        return JSON.parse(response.text.trim());
+
+        // Robust parsing
+        let text = String(response.text || '').trim();
+        if (text.startsWith('```')) {
+            text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+        }
+        console.log('Parsed Scenario JSON:', text);
+        return JSON.parse(text);
     } catch (error: any) {
         console.error("Error generating skill scenario:", error);
         throw new Error("فشل في إنشاء سيناريو التمرين.");

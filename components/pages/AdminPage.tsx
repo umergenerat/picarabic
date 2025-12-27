@@ -9,6 +9,7 @@ import {
 import { useI18n } from '../../contexts/I18nContext';
 import * as authService from '../../services/authService';
 import * as db from '../../services/dataService';
+import { supabase } from '../../services/supabaseClient';
 import Spinner from '../common/Spinner';
 import {
     TextData, PlatformUser, UserRole, Skill, Team, Specialization, MultilingualString,

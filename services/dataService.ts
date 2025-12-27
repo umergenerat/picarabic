@@ -46,12 +46,27 @@ export const getTexts = async (): Promise<TextData[]> => {
     if (!isSupabaseReady()) return initialData.initialTexts;
     const { data, error } = await supabase!.from('texts').select('*');
     if (error) throw error;
-    return data || [];
+
+    return (data || []).map((text: any) => ({
+        ...text,
+        learningObjectives: text.learning_objectives || [],
+        skillIds: text.skill_ids || []
+    }));
 };
 
 export const saveTexts = async (texts: TextData[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('texts').upsert(texts);
+
+    const textsToSave = texts.map(text => {
+        const { learningObjectives, skillIds, ...rest } = text;
+        return {
+            ...rest,
+            learning_objectives: learningObjectives,
+            skill_ids: skillIds
+        };
+    });
+
+    const { error } = await supabase!.from('texts').upsert(textsToSave);
     if (error) throw error;
 };
 
@@ -106,12 +121,27 @@ export const getSpecializations = async (): Promise<Specialization[]> => {
     if (!isSupabaseReady()) return initialData.initialSpecializations;
     const { data, error } = await supabase!.from('specializations').select('*');
     if (error) throw error;
-    return data || [];
+
+    // Map snake_case to camelCase
+    return (data || []).map((spec: any) => ({
+        ...spec,
+        traineeCount: spec.trainee_count || spec.traineeCount || 0
+    }));
 };
 
 export const saveSpecializations = async (specs: Specialization[]) => {
     if (!isSupabaseReady()) return;
-    const { error } = await supabase!.from('specializations').upsert(specs);
+
+    // Map camelCase to snake_case
+    const specsToSave = specs.map(spec => {
+        const { traineeCount, ...rest } = spec;
+        return {
+            ...rest,
+            trainee_count: traineeCount
+        };
+    });
+
+    const { error } = await supabase!.from('specializations').upsert(specsToSave);
     if (error) throw error;
 };
 

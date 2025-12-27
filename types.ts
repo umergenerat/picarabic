@@ -92,7 +92,7 @@ export interface Resource {
 export type UserRole = 'متدرب' | 'أستاذ' | 'مدير';
 
 export interface PlatformUser {
-    id: number;
+    id: string;
     name: string;
     email: string;
     phone: string;

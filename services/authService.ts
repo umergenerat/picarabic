@@ -7,7 +7,7 @@ export const ADMIN_EMAIL = 'aitloutouaom@gmail.com';
 export const signIn = async (email: string, password: string): Promise<User> => {
     if (!supabase) {
         if (email === ADMIN_EMAIL && password === 'admin') {
-            return { displayName: 'المدير (Demo)', email: ADMIN_EMAIL, photoURL: '', mustChangePassword: false };
+            return { id: 'demo-admin', displayName: 'المدير (Demo)', email: ADMIN_EMAIL, photoURL: '', mustChangePassword: false };
         }
         throw new Error('login.error');
     }
@@ -23,9 +23,10 @@ export const signIn = async (email: string, password: string): Promise<User> => 
     const { data: profile } = await supabase.from('profiles').select('*').eq('email', email).single();
 
     return {
-        displayName: profile?.name || data.user.email?.split('@')[0],
+        id: data.user.id,
+        displayName: profile?.display_name || data.user.email?.split('@')[0],
         email: data.user.email || '',
-        photoURL: `https://i.pravatar.cc/150?u=${data.user.id}`,
+        photoURL: profile?.photo_url || `https://i.pravatar.cc/150?u=${data.user.id}`,
         mustChangePassword: profile?.must_change_password || false
     };
 };
@@ -60,7 +61,7 @@ export const forceChangePassword = async (email: string, newPass: string, confir
 
     if (!supabase) {
         // Fallback for demo mode
-        return { displayName: email.split('@')[0], email, photoURL: '', mustChangePassword: false };
+        return { id: 'demo-user', displayName: email.split('@')[0], email, photoURL: '', mustChangePassword: false };
     }
 
     // Update the password in Auth
@@ -75,9 +76,10 @@ export const forceChangePassword = async (email: string, newPass: string, confir
     const { data: profile } = await supabase.from('profiles').select('*').eq('email', email).single();
 
     return {
-        displayName: profile?.name || email.split('@')[0],
+        id: profile?.id || authData.user.id,
+        displayName: profile?.display_name || email.split('@')[0],
         email: email,
-        photoURL: `https://i.pravatar.cc/150?u=${authData.user.id}`,
+        photoURL: profile?.photo_url || `https://i.pravatar.cc/150?u=${authData.user.id}`,
         mustChangePassword: false
     };
 };
@@ -95,8 +97,8 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
     // In production, setting another user's password usually happens via a trigger or Edge Function.
     // Here we ensure the profile data is synchronized.
     const { error } = await supabase.from('profiles').upsert({
-        id: user.id || undefined, // Supabase uses UUID for ID if linked to Auth
-        name: user.name,
+        id: user.id, // Supabase uses UUID for ID if linked to Auth
+        display_name: user.name,
         email: user.email,
         phone: user.phone,
         specialization: user.specialization,

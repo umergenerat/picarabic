@@ -366,8 +366,8 @@ const SkillEditForm: React.FC<{ skill: Skill; onSave: (s: Skill) => void; onCanc
                                     type="button"
                                     onClick={() => setFormData({ ...formData, iconName })}
                                     className={`group flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 ${isSelected
-                                            ? 'bg-primary-500 text-white ring-2 ring-primary-500 shadow-md transform scale-105'
-                                            : 'bg-white dark:bg-slate-700 text-slate-400 hover:bg-primary-50 dark:hover:bg-slate-600 hover:text-primary-600'
+                                        ? 'bg-primary-500 text-white ring-2 ring-primary-500 shadow-md transform scale-105'
+                                        : 'bg-white dark:bg-slate-700 text-slate-400 hover:bg-primary-50 dark:hover:bg-slate-600 hover:text-primary-600'
                                         }`}
                                 >
                                     <IconComponent className="h-6 w-6" />
@@ -378,6 +378,40 @@ const SkillEditForm: React.FC<{ skill: Skill; onSave: (s: Skill) => void; onCanc
                             );
                         })}
                     </div>
+                </div>
+            </div>
+        </form>
+    );
+};
+
+const SpecializationEditForm: React.FC<{ specialization: Specialization; onSave: (s: Specialization) => void; onCancel: () => void }> = ({ specialization, onSave, onCancel }) => {
+    const { t, locale } = useI18n();
+    const [formData, setFormData] = useState<Specialization>(specialization);
+
+    return (
+        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-6">
+            <div className="flex justify-between items-center border-b pb-4">
+                <h3 className="text-xl font-bold">{formData.id && formData.id.length < 20 ? 'تعديل التخصص' : 'إضافة تخصص جديد'}</h3>
+                <div className="flex gap-2">
+                    <Button variant="secondary" onClick={onCancel} size="sm">إلغاء</Button>
+                    <Button type="submit" size="sm">حفظ التخصص</Button>
+                </div>
+            </div>
+            <div className="space-y-4">
+                <MultilingualInput
+                    label="اسم التخصص"
+                    value={formData.name}
+                    name="name"
+                    onChange={(e, lang) => setFormData({ ...formData, name: { ...formData.name, [lang]: e.target.value } })}
+                />
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">عدد المتدربين (تقديري)</label>
+                    <input
+                        type="number"
+                        value={formData.traineeCount || 0}
+                        onChange={(e) => setFormData({ ...formData, traineeCount: parseInt(e.target.value) || 0 })}
+                        className="block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm"
+                    />
                 </div>
             </div>
         </form>
@@ -464,6 +498,29 @@ const AdminPage: React.FC<any> = (props) => {
         finally { setIsLoading(false); }
     };
 
+    const handleSaveSpecialization = async (spec: Specialization) => {
+        setIsLoading(true);
+        try {
+            const updatedSpecs = props.specializations.some((s: any) => s.id === spec.id)
+                ? props.specializations.map((s: any) => s.id === spec.id ? spec : s)
+                : [...props.specializations, spec];
+            await db.saveSpecializations(updatedSpecs);
+            setEditingItem(null);
+            if (props.refreshData) props.refreshData();
+        } catch (e) { alert("حدث خطأ أثناء حفظ التخصص"); }
+        finally { setIsLoading(false); }
+    };
+
+    const handleDeleteSpecialization = async (id: string) => {
+        if (!confirm('هل أنت متأكد من حذف هذا التخصص؟')) return;
+        setIsLoading(true);
+        try {
+            await db.deleteSpecialization(id);
+            if (props.refreshData) props.refreshData();
+        } catch (e) { alert("حدث خطأ أثناء حذف التخصص"); }
+        finally { setIsLoading(false); }
+    };
+
     const handleAdminPassChange = async (e: React.FormEvent) => {
         e.preventDefault();
         setAdminMsg({ text: '', type: '' });
@@ -525,16 +582,11 @@ const AdminPage: React.FC<any> = (props) => {
                                     onCancel={() => setEditingItem(null)}
                                 />
                             ) : (
-                                <form onSubmit={(e) => { e.preventDefault(); /* Logic to save specialization */ setEditingItem(null); }} className="space-y-4">
-                                    <MultilingualInput label="العنوان" value={editingItem.title || editingItem.name} name="title" onChange={(e, lang) => {
-                                        const field = editingItem.title ? 'title' : 'name';
-                                        setEditingItem({ ...editingItem, [field]: { ...editingItem[field], [lang]: e.target.value } });
-                                    }} />
-                                    <div className="flex justify-end gap-2">
-                                        <Button variant="secondary" onClick={() => setEditingItem(null)}>إلغاء</Button>
-                                        <Button type="submit">حفظ التغييرات</Button>
-                                    </div>
-                                </form>
+                                <SpecializationEditForm
+                                    specialization={editingItem}
+                                    onSave={handleSaveSpecialization}
+                                    onCancel={() => setEditingItem(null)}
+                                />
                             )}
                         </Card>
                     ) : (
@@ -611,9 +663,32 @@ const AdminPage: React.FC<any> = (props) => {
                                     </div>
                                 ))}
                                 {activeContentType === 'specializations' && props.specializations.map((s: any) => (
-                                    <div key={s.id} className="py-3 flex justify-between items-center text-sm">
-                                        <span>{s.name[locale]}</span>
-                                        <div className="flex gap-2"><button onClick={() => setEditingItem(s)}><PencilIcon className="h-4 w-4" /></button></div>
+                                    <div key={s.id} className="py-4 flex justify-between items-center text-sm border-b last:border-0 border-slate-100 dark:border-slate-700/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors px-2 rounded-lg">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-primary-50 dark:bg-slate-700 text-primary-600 rounded-xl shadow-sm">
+                                                <AcademicCapIcon className="h-6 w-6" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{s.name[locale]}</span>
+                                                <span className="text-xs text-slate-500 mt-0.5">عدد المتدربين: {s.traineeCount || 0}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => setEditingItem(s)}
+                                                className="p-2 hover:bg-primary-100 hover:text-primary-600 text-slate-400 rounded-lg transition-colors"
+                                                title="تعديل"
+                                            >
+                                                <PencilIcon className="h-5 w-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteSpecialization(s.id)}
+                                                className="p-2 hover:bg-red-100 hover:text-red-600 text-slate-400 rounded-lg transition-colors"
+                                                title="حذف"
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

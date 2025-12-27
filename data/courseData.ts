@@ -51,11 +51,39 @@ export const initialProgressData: ProgressDataPoint[] = [
 
 export const initialChatChannels: ChatChannel[] = [
     {
+        id: 'smart-support',
+        name: { ar: 'مركز الدعم الذكي', fr: 'Support Intelligent' },
+        iconName: 'InformationCircleIcon',
+        model: 'gemini-1.5-flash',
+        defaultSystemPrompt: {
+            ar: 'أنت مساعد الدعم الفني للمنصة التعليمية ISTA TATA. مهمتك هي مساعدة الطلاب في استخدام المنصة، شرح المميزات، وحل المشكلات التقنية البسيطة. كن ودوداً ومختصراً.',
+            fr: 'Vous êtes l\'assistant support technique de la plateforme ISTA TATA...'
+        },
+        systemPrompt: {
+            ar: 'أنت مساعد الدعم الفني للمنصة التعليمية ISTA TATA. مهمتك هي مساعدة الطلاب في استخدام المنصة، شرح المميزات، وحل المشكلات التقنية البسيطة. كن ودوداً ومختصراً.',
+            fr: 'Vous êtes l\'assistant support technique de la plateforme ISTA TATA...'
+        },
+    },
+    {
+        id: 'test-expert',
+        name: { ar: 'خبير الاختبارات الذكي', fr: 'Expert Tests' },
+        iconName: 'BeakerIcon',
+        model: 'gemini-1.5-flash',
+        defaultSystemPrompt: {
+            ar: 'أنت خبير في تقييم المعارف. مهمتك هي إجراء اختبارات تفاعلية قصيرة للطلاب بناءً على تخصصاتهم. اطرح سؤالاً واحداً في كل مرة وانتظر الإجابة.',
+            fr: 'Expert en évaluation... Proposez un quiz interactif.'
+        },
+        systemPrompt: {
+            ar: 'أنت خبير في تقييم المعارف. مهمتك هي إجراء اختبارات تفاعلية قصيرة للطلاب بناءً على تخصصاتهم. اطرح سؤالاً واحداً في كل مرة وانتظر الإجابة.',
+            fr: 'Expert en évaluation... Proposez un quiz interactif.'
+        },
+    },
+    {
         id: 'comm-expert',
         name: { ar: 'خبير التواصل المهني', fr: 'Expert Comm' },
         iconName: 'ChatBubbleLeftRightIcon',
-        model: 'gemini-3-flash-preview',
-        defaultSystemPrompt: { ar: 'أنت مساعد أكاديمي...', fr: 'Expert assistant...' },
-        systemPrompt: { ar: 'أنت مساعد أكاديمي...', fr: 'Expert assistant...' },
+        model: 'gemini-1.5-flash',
+        defaultSystemPrompt: { ar: 'أنت مساعد أكاديمي متخصص في التواصل المهني...', fr: 'Expert assistant en communication...' },
+        systemPrompt: { ar: 'أنت مساعد أكاديمي متخصص في التواصل المهني...', fr: 'Expert assistant en communication...' },
     }
 ];

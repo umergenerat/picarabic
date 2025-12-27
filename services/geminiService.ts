@@ -3,9 +3,9 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { QuizQuestion } from '../types';
 
 const getAiClient = () => {
-    const API_KEY = process.env.API_KEY;
+    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
     if (!API_KEY) {
-        throw new Error("API_KEY environment variable not set. AI features are unavailable.");
+        throw new Error("VITE_GEMINI_API_KEY environment variable not set. AI features are unavailable.");
     }
     return new GoogleGenAI({ apiKey: API_KEY });
 };

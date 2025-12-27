@@ -385,6 +385,61 @@ const SkillEditForm: React.FC<{ skill: Skill; onSave: (s: Skill) => void; onCanc
     );
 };
 
+const ChatChannelEditForm: React.FC<{ channel: ChatChannel; onSave: (c: ChatChannel) => void; onCancel: () => void }> = ({ channel, onSave, onCancel }) => {
+    const { t, locale } = useI18n();
+    const [formData, setFormData] = useState<ChatChannel>(channel);
+
+    return (
+        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-6">
+            <div className="flex justify-between items-center border-b pb-4">
+                <h3 className="text-xl font-bold">{formData.id ? 'تعديل قناة الذكاء الاصطناعي' : 'إضافة قناة جديدة'}</h3>
+                <div className="flex gap-2">
+                    <Button variant="secondary" onClick={onCancel} size="sm">إلغاء</Button>
+                    <Button type="submit" size="sm">حفظ الإعدادات</Button>
+                </div>
+            </div>
+            <div className="space-y-4">
+                <MultilingualInput
+                    label="اسم القناة"
+                    value={formData.name}
+                    name="name"
+                    onChange={(e, lang) => setFormData({ ...formData, name: { ...formData.name, [lang]: e.target.value } })}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">الموديل (AI Model)</label>
+                        <select
+                            value={formData.model}
+                            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                            className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
+                        >
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Powerful)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">الأيقونة</label>
+                        <select
+                            value={formData.iconName}
+                            onChange={(e) => setFormData({ ...formData, iconName: e.target.value })}
+                            className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
+                        >
+                            {Object.keys(iconMap).map(i => <option key={i} value={i}>{i}</option>)}
+                        </select>
+                    </div>
+                </div>
+                <MultilingualInput
+                    label="التعليمات البرمجية (System Prompt)"
+                    type="textarea"
+                    value={formData.systemPrompt}
+                    name="systemPrompt"
+                    onChange={(e, lang) => setFormData({ ...formData, systemPrompt: { ...formData.systemPrompt, [lang]: e.target.value } })}
+                />
+            </div>
+        </form>
+    );
+};
+
 const SpecializationEditForm: React.FC<{ specialization: Specialization; onSave: (s: Specialization) => void; onCancel: () => void }> = ({ specialization, onSave, onCancel }) => {
     const { t, locale } = useI18n();
     const [formData, setFormData] = useState<Specialization>(specialization);
@@ -424,10 +479,11 @@ type AdminTab = 'content' | 'users' | 'reports' | 'settings';
 const AdminPage: React.FC<any> = (props) => {
     const { t, locale } = useI18n();
     const [activeTab, setActiveTab] = useState<AdminTab>('content');
-    const [activeContentType, setActiveContentType] = useState<'texts' | 'skills' | 'specializations'>('texts');
+    const [activeContentType, setActiveContentType] = useState<'texts' | 'skills' | 'specializations' | 'chat-channels'>('texts');
     const [editingItem, setEditingItem] = useState<any | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [platformUsers, setPlatformUsers] = useState<PlatformUser[]>([]);
+    const [chatChannels, setChatChannels] = useState<ChatChannel[]>([]);
 
     // Admin Settings States
     const [adminCurrentPass, setAdminCurrentPass] = useState('');
@@ -437,6 +493,9 @@ const AdminPage: React.FC<any> = (props) => {
     useEffect(() => {
         if (activeTab === 'users' || activeTab === 'reports') {
             loadUsers();
+        }
+        if (activeTab === 'content') {
+            loadChatChannels();
         }
 
         // Diagnostic: Check current user role in DB to verify RLS
@@ -453,6 +512,13 @@ const AdminPage: React.FC<any> = (props) => {
         };
         checkUserRole();
     }, [activeTab]);
+
+    const loadChatChannels = async () => {
+        try {
+            const channels = await db.getChatChannels();
+            setChatChannels(channels);
+        } catch (e) { console.error(e); }
+    };
 
     const loadUsers = async () => {
         setIsLoading(true);
@@ -541,6 +607,28 @@ const AdminPage: React.FC<any> = (props) => {
         finally { setIsLoading(false); }
     };
 
+    const handleSaveChatChannel = async (channel: ChatChannel) => {
+        setIsLoading(true);
+        try {
+            await db.saveChatChannels([...chatChannels.filter(c => c.id !== channel.id), channel]);
+            await loadChatChannels();
+            setEditingItem(null);
+            if (props.refreshData) props.refreshData();
+        } catch (e: any) {
+            alert(`حدث خطأ أثناء حفظ القناة: ${e.message}`);
+        } finally { setIsLoading(false); }
+    };
+
+    const handleDeleteChatChannel = async (id: string) => {
+        if (!confirm('هل أنت متأكد من حذف هذه القناة؟')) return;
+        setIsLoading(true);
+        try {
+            await db.deleteChatChannel(id);
+            await loadChatChannels();
+        } catch (e) { alert("حدث خطأ أثناء حذف القناة"); }
+        finally { setIsLoading(false); }
+    };
+
     const handleAdminPassChange = async (e: React.FormEvent) => {
         e.preventDefault();
         setAdminMsg({ text: '', type: '' });
@@ -578,9 +666,9 @@ const AdminPage: React.FC<any> = (props) => {
             {activeTab === 'content' && (
                 <div className="space-y-6">
                     <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit">
-                        {['texts', 'skills', 'specializations'].map((type: any) => (
+                        {['texts', 'skills', 'specializations', 'chat-channels'].map((type: any) => (
                             <button key={type} onClick={() => { setActiveContentType(type); setEditingItem(null); }} className={`px-4 py-2 text-xs font-bold rounded-md ${activeContentType === type ? 'bg-white shadow-sm text-primary-600' : 'text-slate-500'}`}>
-                                {t(`nav.${type}`)}
+                                {type === 'chat-channels' ? 'قنوات الذكاء الاصطناعي' : t(`nav.${type}`)}
                             </button>
                         ))}
                     </div>
@@ -599,6 +687,12 @@ const AdminPage: React.FC<any> = (props) => {
                                 <SkillEditForm
                                     skill={editingItem}
                                     onSave={handleSaveSkill}
+                                    onCancel={() => setEditingItem(null)}
+                                />
+                            ) : activeContentType === 'chat-channels' ? (
+                                <ChatChannelEditForm
+                                    channel={editingItem}
+                                    onSave={handleSaveChatChannel}
                                     onCancel={() => setEditingItem(null)}
                                 />
                             ) : (
@@ -631,6 +725,15 @@ const AdminPage: React.FC<any> = (props) => {
                                             title: { ar: '', fr: '' },
                                             description: { ar: '', fr: '' },
                                             iconName: 'SparklesIcon'
+                                        });
+                                    } else if (activeContentType === 'chat-channels') {
+                                        setEditingItem({
+                                            id: `ai-${Date.now()}`,
+                                            name: { ar: '', fr: '' },
+                                            iconName: 'SparklesIcon',
+                                            model: 'gemini-1.5-flash',
+                                            defaultSystemPrompt: { ar: '', fr: '' },
+                                            systemPrompt: { ar: '', fr: '' }
                                         });
                                     } else {
                                         setEditingItem({ id: Date.now().toString(), name: { ar: '', fr: '' } });
@@ -708,6 +811,23 @@ const AdminPage: React.FC<any> = (props) => {
                                             >
                                                 <TrashIcon className="h-5 w-5" />
                                             </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {activeContentType === 'chat-channels' && chatChannels.map((c: any) => (
+                                    <div key={c.id} className="py-4 flex justify-between items-center text-sm border-b last:border-0 border-slate-100 dark:border-slate-700/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors px-2 rounded-lg">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-primary-50 dark:bg-slate-700 text-primary-600 rounded-xl shadow-sm">
+                                                {iconMap[c.iconName] && React.createElement(iconMap[c.iconName], { className: "h-6 w-6" })}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{c.name[locale]}</span>
+                                                <span className="text-xs text-slate-500 mt-0.5">الموديل: {c.model}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button onClick={() => setEditingItem(c)} className="p-2 hover:bg-primary-100 hover:text-primary-600 text-slate-400 rounded-lg"><PencilIcon className="h-5 w-5" /></button>
+                                            <button onClick={() => handleDeleteChatChannel(c.id)} className="p-2 hover:bg-red-100 hover:text-red-600 text-slate-400 rounded-lg"><TrashIcon className="h-5 w-5" /></button>
                                         </div>
                                     </div>
                                 ))}

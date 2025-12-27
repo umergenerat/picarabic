@@ -20,6 +20,7 @@ import * as db from './services/dataService';
 import { HomeIcon, BookOpenIcon, SparklesIcon, PresentationChartBarIcon, BeakerIcon, ChatBubbleLeftRightIcon, LinkIcon, ChartPieIcon, Cog6ToothIcon } from './components/common/Icons';
 import { useI18n } from './contexts/I18nContext';
 import { supabase } from './services/supabaseClient';
+import SmartSupportButton from './components/common/SmartSupportButton';
 
 const navItems: Omit<NavItem, 'label'>[] = [
     { id: 'home', labelKey: 'nav.home', icon: HomeIcon, adminOnly: false },
@@ -35,6 +36,7 @@ const navItems: Omit<NavItem, 'label'>[] = [
 
 const App: React.FC = () => {
     const [activePage, setActivePage] = useState<Page>('home');
+    const [activeChatChannelId, setActiveChatChannelId] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [texts, setTexts] = useState<TextData[]>([]);
     const [skills, setSkills] = useState<Skill[]>([]);
@@ -223,6 +225,10 @@ const App: React.FC = () => {
                     onSuccess={(u) => { setUser(u); setIsForceChangePasswordModalOpen(false); }}
                 />
             )}
+            <SmartSupportButton onClick={() => {
+                setActiveChatChannelId('smart-support');
+                setActivePage('chat');
+            }} />
         </div>
     );
 };

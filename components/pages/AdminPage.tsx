@@ -469,17 +469,18 @@ const AdminPage: React.FC<any> = (props) => {
             await authService.saveUser(user);
             await loadUsers();
             setEditingItem(null);
-        } catch (e) { alert("حدث خطأ أثناء الحفظ"); }
+        } catch (e: any) {
+            console.error('Error saving user:', e);
+            alert(`حدث خطأ أثناء حفظ المتدرب: ${e.message || 'خطأ غير معروف'}`);
+        }
         finally { setIsLoading(false); }
     };
 
     const handleSaveText = async (text: TextData) => {
         setIsLoading(true);
         try {
-            const updatedTexts = props.texts.some((t: any) => t.id === text.id)
-                ? props.texts.map((t: any) => t.id === text.id ? text : t)
-                : [...props.texts, text];
-            await db.saveTexts(updatedTexts);
+            console.log('Saving individual text:', text);
+            await db.saveText(text);
             setEditingItem(null);
             if (props.refreshData) props.refreshData();
         } catch (e: any) {
@@ -492,11 +493,8 @@ const AdminPage: React.FC<any> = (props) => {
     const handleSaveSkill = async (skill: Skill) => {
         setIsLoading(true);
         try {
-            const updatedSkills = props.skills.some((s: any) => s.id === skill.id)
-                ? props.skills.map((s: any) => s.id === skill.id ? skill : s)
-                : [...props.skills, skill];
-
-            await db.saveSkills(updatedSkills);
+            console.log('Saving individual skill:', skill);
+            await db.saveSkill(skill);
             setEditingItem(null);
             if (props.refreshData) props.refreshData();
         } catch (e: any) {
@@ -522,12 +520,8 @@ const AdminPage: React.FC<any> = (props) => {
     const handleSaveSpecialization = async (spec: Specialization) => {
         setIsLoading(true);
         try {
-            const updatedSpecs = props.specializations.some((s: any) => s.id === spec.id)
-                ? props.specializations.map((s: any) => s.id === spec.id ? spec : s)
-                : [...props.specializations, spec];
-
-            console.log('Sending specializations to save:', updatedSpecs);
-            await db.saveSpecializations(updatedSpecs);
+            console.log('Saving individual specialization:', spec);
+            await db.saveSpecialization(spec);
             setEditingItem(null);
             if (props.refreshData) props.refreshData();
         } catch (e: any) {

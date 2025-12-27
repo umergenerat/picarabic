@@ -19,24 +19,21 @@ export const getSkills = async (): Promise<Skill[]> => {
     }));
 };
 
-export const saveSkills = async (skills: Skill[]) => {
+export const saveSkill = async (skill: Skill) => {
     if (!isSupabaseReady()) return;
 
-    // Map camelCase for frontend to snake_case for DB
-    const skillsToSave = skills.map(skill => {
-        return {
-            id: skill.id,
-            title: skill.title,
-            description: skill.description,
-            icon_name: skill.iconName
-        };
-    });
+    const skillToSave = {
+        id: skill.id,
+        title: skill.title,
+        description: skill.description,
+        icon_name: skill.iconName
+    };
 
-    console.log('Attempting to save skills:', skillsToSave);
+    console.log('Attempting to save skill:', skillToSave);
 
-    const { error } = await supabase!.from('skills').upsert(skillsToSave);
+    const { error } = await supabase!.from('skills').upsert(skillToSave);
     if (error) {
-        console.error('Detailed Supabase Error (Skills):', {
+        console.error('Detailed Supabase Error (Skill):', {
             message: error.message,
             details: error.details,
             hint: error.hint,
@@ -44,6 +41,10 @@ export const saveSkills = async (skills: Skill[]) => {
         });
         throw error;
     }
+};
+// Alias for backward compatibility if needed, but we'll update AdminPage
+export const saveSkills = async (skills: Skill[]) => {
+    for (const skill of skills) await saveSkill(skill);
 };
 
 export const deleteSkill = async (id: number) => {
@@ -65,28 +66,25 @@ export const getTexts = async (): Promise<TextData[]> => {
     }));
 };
 
-export const saveTexts = async (texts: TextData[]) => {
+export const saveText = async (text: TextData) => {
     if (!isSupabaseReady()) return;
 
-    const textsToSave = texts.map(text => {
-        // Explicitly pick fields to avoid sending extra frontend fields
-        return {
-            id: text.id,
-            title: text.title,
-            specialization: text.specialization,
-            content: text.content,
-            questions: text.questions || [],
-            difficulty: text.difficulty || 'متوسط',
-            learning_objectives: text.learningObjectives || [],
-            skill_ids: text.skillIds || []
-        };
-    });
+    const textToSave = {
+        id: text.id,
+        title: text.title,
+        specialization: text.specialization,
+        content: text.content,
+        questions: text.questions || [],
+        difficulty: text.difficulty || 'متوسط',
+        learning_objectives: text.learningObjectives || [],
+        skill_ids: text.skillIds || []
+    };
 
-    console.log('Attempting to save texts:', textsToSave);
+    console.log('Attempting to save text:', textToSave);
 
-    const { error } = await supabase!.from('texts').upsert(textsToSave);
+    const { error } = await supabase!.from('texts').upsert(textToSave);
     if (error) {
-        console.error('Detailed Supabase Error (Texts):', {
+        console.error('Detailed Supabase Error (Text):', {
             message: error.message,
             details: error.details,
             hint: error.hint,
@@ -94,6 +92,10 @@ export const saveTexts = async (texts: TextData[]) => {
         });
         throw error;
     }
+};
+
+export const saveTexts = async (texts: TextData[]) => {
+    for (const text of texts) await saveText(text);
 };
 
 export const deleteText = async (id: string) => {
@@ -110,29 +112,27 @@ export const getTeams = async (): Promise<Team[]> => {
     return data || [];
 };
 
-export const saveTeams = async (teams: Team[]) => {
+export const saveTeam = async (team: Team) => {
     if (!isSupabaseReady()) return;
 
-    const teamsToSave = teams.map(team => {
-        return {
-            id: team.id,
-            name: team.name,
-            specialization: team.specialization,
-            members: team.members,
-            presentation: team.presentation,
-            presentation_data: team.presentationData,
-            video_summary_url: team.videoSummaryUrl,
-            presentation_title: team.presentationTitle,
-            due_date: team.dueDate,
-            team_leader: team.teamLeader
-        };
-    });
+    const teamToSave = {
+        id: team.id,
+        name: team.name,
+        specialization: team.specialization,
+        members: team.members,
+        presentation: team.presentation,
+        presentation_data: team.presentationData,
+        video_summary_url: team.videoSummaryUrl,
+        presentation_title: team.presentationTitle,
+        due_date: team.dueDate,
+        team_leader: team.teamLeader
+    };
 
-    console.log('Attempting to save teams:', teamsToSave);
+    console.log('Attempting to save team:', teamToSave);
 
-    const { error } = await supabase!.from('teams').upsert(teamsToSave);
+    const { error } = await supabase!.from('teams').upsert(teamToSave);
     if (error) {
-        console.error('Detailed Supabase Error (Teams):', {
+        console.error('Detailed Supabase Error (Team):', {
             message: error.message,
             details: error.details,
             hint: error.hint,
@@ -140,6 +140,10 @@ export const saveTeams = async (teams: Team[]) => {
         });
         throw error;
     }
+};
+
+export const saveTeams = async (teams: Team[]) => {
+    for (const team of teams) await saveTeam(team);
 };
 
 export const deleteTeam = async (id: number) => {
@@ -156,23 +160,21 @@ export const getResources = async (): Promise<Resource[]> => {
     return data || [];
 };
 
-export const saveResources = async (resources: Resource[]) => {
+export const saveResource = async (res: Resource) => {
     if (!isSupabaseReady()) return;
 
-    const resourcesToSave = resources.map(res => {
-        return {
-            id: res.id,
-            title: res.title,
-            type: res.type,
-            link: res.link
-        };
-    });
+    const resToSave = {
+        id: res.id,
+        title: res.title,
+        type: res.type,
+        link: res.link
+    };
 
-    console.log('Attempting to save resources:', resourcesToSave);
+    console.log('Attempting to save resource:', resToSave);
 
-    const { error } = await supabase!.from('resources').upsert(resourcesToSave);
+    const { error } = await supabase!.from('resources').upsert(resToSave);
     if (error) {
-        console.error('Detailed Supabase Error (Resources):', {
+        console.error('Detailed Supabase Error (Resource):', {
             message: error.message,
             details: error.details,
             hint: error.hint,
@@ -180,6 +182,10 @@ export const saveResources = async (resources: Resource[]) => {
         });
         throw error;
     }
+};
+
+export const saveResources = async (resources: Resource[]) => {
+    for (const res of resources) await saveResource(res);
 };
 
 export const deleteResource = async (id: string) => {
@@ -201,25 +207,20 @@ export const getSpecializations = async (): Promise<Specialization[]> => {
     }));
 };
 
-export const saveSpecializations = async (specs: Specialization[]) => {
+export const saveSpecialization = async (spec: Specialization) => {
     if (!isSupabaseReady()) return;
 
-    // Map camelCase to snake_case and clean up data
-    const specsToSave = specs.map(spec => {
-        // Explicitly only include fields that exist in the database
-        // and avoid sending back generated fields like created_at if possible
-        return {
-            id: spec.id,
-            name: spec.name,
-            trainee_count: spec.traineeCount || 0
-        };
-    });
+    const specToSave = {
+        id: spec.id,
+        name: spec.name,
+        trainee_count: spec.traineeCount || 0
+    };
 
-    console.log('Attempting to save specializations:', specsToSave);
+    console.log('Attempting to save specialization:', specToSave);
 
-    const { error } = await supabase!.from('specializations').upsert(specsToSave);
+    const { error } = await supabase!.from('specializations').upsert(specToSave);
     if (error) {
-        console.error('Detailed Supabase Error:', {
+        console.error('Detailed Supabase Error (Specialization):', {
             message: error.message,
             details: error.details,
             hint: error.hint,
@@ -227,6 +228,10 @@ export const saveSpecializations = async (specs: Specialization[]) => {
         });
         throw error;
     }
+};
+
+export const saveSpecializations = async (specs: Specialization[]) => {
+    for (const spec of specs) await saveSpecialization(spec);
 };
 
 export const deleteSpecialization = async (id: string) => {
@@ -314,22 +319,20 @@ export const getTestContexts = async (): Promise<TestContext[]> => {
     return data || [];
 };
 
-export const saveTestContexts = async (contexts: TestContext[]) => {
+export const saveTestContext = async (ctx: TestContext) => {
     if (!isSupabaseReady()) return;
 
-    const contextsToSave = contexts.map(ctx => {
-        return {
-            id: ctx.id,
-            title: ctx.title,
-            content: ctx.content
-        };
-    });
+    const ctxToSave = {
+        id: ctx.id,
+        title: ctx.title,
+        content: ctx.content
+    };
 
-    console.log('Attempting to save test contexts:', contextsToSave);
+    console.log('Attempting to save test context:', ctxToSave);
 
-    const { error } = await supabase!.from('test_contexts').upsert(contextsToSave);
+    const { error } = await supabase!.from('test_contexts').upsert(ctxToSave);
     if (error) {
-        console.error('Detailed Supabase Error (TestContexts):', {
+        console.error('Detailed Supabase Error (TestContext):', {
             message: error.message,
             details: error.details,
             hint: error.hint,
@@ -337,6 +340,10 @@ export const saveTestContexts = async (contexts: TestContext[]) => {
         });
         throw error;
     }
+};
+
+export const saveTestContexts = async (contexts: TestContext[]) => {
+    for (const ctx of contexts) await saveTestContext(ctx);
 };
 
 export const deleteTestContext = async (id: string) => {

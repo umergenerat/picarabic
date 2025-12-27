@@ -94,8 +94,8 @@ export const generateQuiz = async (context: string): Promise<QuizQuestion[]> => 
     try {
         const ai = getAiClient();
         const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: `بناءً على النص التالي، قم بإنشاء 5 أسئلة اختيار من متعدد باللغة العربية لاختبار فهم المتدرب. يجب أن يكون لكل سؤال أربعة خيارات، مع تحديد الإجابة الصحيحة. النص هو: """${context}"""`,
+            model: "gemini-1.5-flash",
+            contents: `أنت خبير تربوي. بناءً على النص القادم، قم بإنشاء 5 أسئلة اختيار من متعدد نوعية وعميقة باللغة العربية لاختبار فهم المتدرب وتطبيقه للمفاهيم. يجب أن يكون لكل سؤال أربعة خيارات ذكية (مشتتات واقعية)، مع تحديد الإجابة الصحيحة. النص هو: """${context}"""`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: questionGenerationSchema
@@ -112,8 +112,8 @@ export const evaluateAnswer = async (context: string, question: string, answer: 
     try {
         const ai = getAiClient();
         const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: `أنت مساعد تعليمي ذكي. قم بتقييم إجابة المتدرب التالية بناءً على النص والسؤال المرفقين. قدم تغذية راجعة بناءة ومشجعة باللغة العربية.\n\nنص: ${context}\nسؤال: ${question}\nإجابة: ${answer}`
+            model: "gemini-1.5-flash",
+            contents: `أنت خبير تعليمي محفز. قيم إجابة المتدرب التالية بدقة بناءً على النص والسؤال المرفقين. قدم ملاحظات بناءة، حدد نقاط القوة، وقدم نصيحة للتحسين إذا لزم الأمر. استخدم لغة عربية مهنية ومشجعة.\n\nالسياق: ${context}\nالسؤال: ${question}\nإجابة المتدرب: ${answer}`
         });
         return response.text;
     } catch (error: any) {
@@ -135,8 +135,13 @@ export const generateSkillScenario = async (skillTitle: string, skillDescription
     try {
         const ai = getAiClient();
         const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: `أنت مدرب تطوير مهني. للمهارة: '${skillTitle}'، قم بإنشاء سيناريو واقعي من بيئة '${specialization}'.`,
+            model: "gemini-1.5-flash",
+            contents: `أنت مدرب تطوير مهني وخبير في المهارات الناعمة (Soft Skills). 
+            المطلوب: إنشاء سيناريو واقعي وتحدي مهني للمهارة: '${skillTitle}'. 
+            الوصف: ${skillDescription}. 
+            السياق المهني: '${specialization}'. 
+            يجب أن يضع السيناريو المتدرب في موقف حرج أو يتطلب اتخاذ قرار ذكي يعكس تمكنه من هذه المهارة. 
+            اجعل السيناريو مفصلاً ومهنياً، ثم اطرح سؤالاً مفتوحاً يحفز الطالب على التفكير العميق في الحل.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: skillScenarioSchema
@@ -153,8 +158,19 @@ export const evaluateSkillAnswer = async (skillTitle: string, scenario: string, 
     try {
         const ai = getAiClient();
         const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: `أنت مدرب مهني. قيم استجابة المتدرب لمهارة '${skillTitle}' في هذا السيناريو: ${scenario}\nإجابة المتدرب: ${userAnswer}`
+            model: "gemini-1.5-flash",
+            contents: `أنت مدرب مهارات حياتية ومهنية (Soft Skills Coach). 
+            قم بتقييم استجابة المتدرب لمهارة '${skillTitle}' بناءً على السيناريو التالي: 
+            ---
+            ${scenario}
+            ---
+            إجابة المتدرب: ${userAnswer}
+            ---
+            المطلوب:
+            1. تقييم مدى ملاءمة الإجابة للمهارة المطلوبة.
+            2. تقديم ملاحظات إيجابية حول نقاط القوة في الإجابة.
+            3. تقديم نصائح عملية لتطوير المهارة بشكل أكبر في هذا الموقف.
+            اجعل أسلوبك تدريبياً، محفزاً، ومهنياً باللغة العربية.`
         });
         return response.text;
     } catch (error: any) {

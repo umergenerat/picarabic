@@ -177,13 +177,18 @@ const App: React.FC = () => {
 
     const isAdmin = user?.email === ADMIN_EMAIL;
 
+    const navigateToChat = (channelId: string) => {
+        setActiveChatChannelId(channelId);
+        setActivePage('chat');
+    };
+
     const renderPage = () => {
         if (isLoading) return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
 
         switch (activePage) {
             case 'home': return <HomePage />;
             case 'texts': return user ? <TextsSection texts={texts} skills={skills} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'skills': return user ? <SkillsSection skills={skills} completedSkills={completedSkills} setCompletedSkills={setCompletedSkills} specializations={specializations} user={user} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'skills': return user ? <SkillsSection skills={skills} completedSkills={completedSkills} setCompletedSkills={setCompletedSkills} specializations={specializations} user={user} onConsultExpert={() => navigateToChat('soft-skills-expert')} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
             case 'presentations': return <PresentationsSection teams={teams} setTeams={setTeams} user={user} isAdmin={isAdmin} />;
             case 'tests': return user ? <TestsSection testContexts={testContexts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
             case 'chat': return <ChatSection user={user} chatChannels={chatChannels} setChatChannels={setChatChannels} />;

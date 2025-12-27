@@ -12,9 +12,10 @@ interface SkillPracticeModalProps {
     specialization: string;
     onClose: () => void;
     onComplete: (skillId: number) => Promise<void>;
+    onConsultExpert?: () => void;
 }
 
-const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, specialization, onClose, onComplete }) => {
+const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, specialization, onClose, onComplete, onConsultExpert }) => {
     const { t, locale } = useI18n();
     const [scenario, setScenario] = useState('');
     const [question, setQuestion] = useState('');
@@ -125,9 +126,22 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                     )}
                 </div>
 
-                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 flex justify-end gap-3 rounded-b-xl">
-                    <Button type="button" variant="secondary" onClick={onClose}>{t('skills.close')}</Button>
-                    {feedback && <Button onClick={handleComplete}>{t('skills.markAsCompleted')}</Button>}
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 flex flex-wrap justify-between items-center gap-3 rounded-b-xl border-t border-slate-200 dark:border-slate-700">
+                    <div className="flex gap-2">
+                        {onConsultExpert && (
+                            <button
+                                onClick={onConsultExpert}
+                                className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-bold text-sm bg-primary-50 dark:bg-primary-900/30 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                                <SparklesIcon className="h-4 w-4" />
+                                {t('skills.consultExpert') || 'استشارة الخبير'}
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        <Button type="button" variant="secondary" onClick={onClose}>{t('skills.close')}</Button>
+                        {feedback && <Button onClick={handleComplete}>{t('skills.markAsCompleted')}</Button>}
+                    </div>
                 </div>
             </Card>
         </div>
@@ -205,9 +219,10 @@ interface SkillsSectionProps {
     setCompletedSkills: React.Dispatch<React.SetStateAction<number[]>>;
     specializations: Specialization[];
     user: User | null;
+    onConsultExpert?: () => void;
 }
 
-const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, setCompletedSkills, specializations, user }) => {
+const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, setCompletedSkills, specializations, user, onConsultExpert }) => {
     const { t } = useI18n();
     const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
     const [skillForPractice, setSkillForPractice] = useState<Skill | null>(null);
@@ -277,6 +292,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, completedSkills, 
                     specialization={selectedSpecialization}
                     onClose={handleCloseModal}
                     onComplete={handleCompleteSkill}
+                    onConsultExpert={onConsultExpert}
                 />
             )}
         </div>

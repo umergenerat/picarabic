@@ -85,5 +85,19 @@ export const initialChatChannels: ChatChannel[] = [
         model: 'gemini-1.5-flash',
         defaultSystemPrompt: { ar: 'أنت مساعد أكاديمي متخصص في التواصل المهني...', fr: 'Expert assistant en communication...' },
         systemPrompt: { ar: 'أنت مساعد أكاديمي متخصص في التواصل المهني...', fr: 'Expert assistant en communication...' },
+    },
+    {
+        id: 'soft-skills-expert',
+        name: { ar: 'خبير المهارات الناعمة', fr: 'Expert Soft Skills' },
+        iconName: 'SparklesIcon',
+        model: 'gemini-1.5-flash',
+        defaultSystemPrompt: {
+            ar: 'أنت مدرب تطوير ذاتي متخصص في المهارات الناعمة (Soft Skills) مثل العمل الجماعي، القيادة، والذكاء العاطفي. مهمتك هي مساعدة المتدربين على تطوير هذه المهارات من خلال النصائح والتمارين.',
+            fr: 'Vous êtes un coach en développement personnel spécialisé dans les Soft Skills...'
+        },
+        systemPrompt: {
+            ar: 'أنت مدرب تطوير ذاتي متخصص في المهارات الناعمة (Soft Skills) مثل العمل الجماعي، القيادة، والذكاء العاطفي. مهمتك هي مساعدة المتدربين على تطوير هذه المهارات من خلال النصائح والتمارين.',
+            fr: 'Vous êtes un coach en développement personnel spécialisé dans les Soft Skills...'
+        },
     }
 ];

@@ -132,17 +132,29 @@ export const getSpecializations = async (): Promise<Specialization[]> => {
 export const saveSpecializations = async (specs: Specialization[]) => {
     if (!isSupabaseReady()) return;
 
-    // Map camelCase to snake_case
+    // Map camelCase to snake_case and clean up data
     const specsToSave = specs.map(spec => {
-        const { traineeCount, ...rest } = spec;
+        // Explicitly only include fields that exist in the database
+        // and avoid sending back generated fields like created_at if possible
         return {
-            ...rest,
-            trainee_count: traineeCount
+            id: spec.id,
+            name: spec.name,
+            trainee_count: spec.traineeCount || 0
         };
     });
 
+    console.log('Attempting to save specializations:', specsToSave);
+
     const { error } = await supabase!.from('specializations').upsert(specsToSave);
-    if (error) throw error;
+    if (error) {
+        console.error('Detailed Supabase Error:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
+        throw error;
+    }
 };
 
 export const deleteSpecialization = async (id: string) => {

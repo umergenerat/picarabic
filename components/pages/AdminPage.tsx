@@ -437,6 +437,20 @@ const AdminPage: React.FC<any> = (props) => {
         if (activeTab === 'users' || activeTab === 'reports') {
             loadUsers();
         }
+
+        // Diagnostic: Check current user role in DB to verify RLS
+        const checkUserRole = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+                console.log('Current Auth User ID:', user.id);
+                console.log('Profile Role in DB:', profile?.role);
+                if (profile?.role !== 'مدير') {
+                    console.warn('Warning: Your role in the "profiles" table is not "مدير". RLS policies may block some operations.');
+                }
+            }
+        };
+        checkUserRole();
     }, [activeTab]);
 
     const loadUsers = async () => {
@@ -504,10 +518,15 @@ const AdminPage: React.FC<any> = (props) => {
             const updatedSpecs = props.specializations.some((s: any) => s.id === spec.id)
                 ? props.specializations.map((s: any) => s.id === spec.id ? spec : s)
                 : [...props.specializations, spec];
+
+            console.log('Sending specializations to save:', updatedSpecs);
             await db.saveSpecializations(updatedSpecs);
             setEditingItem(null);
             if (props.refreshData) props.refreshData();
-        } catch (e) { alert("حدث خطأ أثناء حفظ التخصص"); }
+        } catch (e: any) {
+            console.error('Catch error in handleSaveSpecialization:', e);
+            alert(`حدث خطأ أثناء حفظ التخصص: ${e.message || 'خطأ غير معروف'}`);
+        }
         finally { setIsLoading(false); }
     };
 

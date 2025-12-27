@@ -142,6 +142,18 @@ create table if not exists chat_messages (
   user_name text 
 );
 
+-- Function to check if user is admin (prevents recursion)
+create or replace function public.is_admin() 
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.profiles 
+    where id = auth.uid() 
+    and role = 'مدير'
+  );
+end;
+$$ language plpgsql security definer;
+
 -- ROW LEVEL SECURITY (RLS)
 do $$ 
 begin 
@@ -173,7 +185,7 @@ exception when others then null; end $$;
 
 do $$ 
 begin 
-    execute 'create policy "Admins can update all profiles" on profiles for all using (exists (select 1 from profiles where id = auth.uid() and role = ''مدير''))';
+    execute 'create policy "Admins can update all profiles" on profiles for all using (is_admin())';
 exception when others then null; end $$;
 
 -- Texts Policies
@@ -184,7 +196,7 @@ exception when others then null; end $$;
 
 do $$ 
 begin 
-    execute 'create policy "Admins can manage texts" on texts for all using (exists (select 1 from profiles where id = auth.uid() and role = ''مدير''))';
+    execute 'create policy "Admins can manage texts" on texts for all using (is_admin())';
 exception when others then null; end $$;
 
 -- Simple pattern for other tables: viewable by everyone, managed by admins
@@ -198,7 +210,7 @@ begin
             execute format('create policy "%I_viewable" on %I for select using (true)', t, t);
         exception when others then null; end;
         begin
-            execute format('create policy "%I_admin_manage" on %I for all using (exists (select 1 from profiles where id = auth.uid() and role = ''مدير''))', t, t);
+            execute format('create policy "%I_admin_manage" on %I for all using (is_admin())', t, t);
         exception when others then null; end;
     end loop;
 end $$;
@@ -228,7 +240,7 @@ begin
 exception when others then null; end $$;
 do $$ 
 begin 
-    execute 'create policy "Admins manage messages" on chat_messages for all using (exists (select 1 from profiles where id = auth.uid() and role = ''مدير''))';
+    execute 'create policy "Admins manage messages" on chat_messages for all using (is_admin())';
 exception when others then null; end $$;
 
 -- Function to handle new user signup

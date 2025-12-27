@@ -482,7 +482,10 @@ const AdminPage: React.FC<any> = (props) => {
             await db.saveTexts(updatedTexts);
             setEditingItem(null);
             if (props.refreshData) props.refreshData();
-        } catch (e) { alert("حدث خطأ أثناء حفظ النص"); }
+        } catch (e: any) {
+            console.error('Error saving text:', e);
+            alert(`حدث خطأ أثناء حفظ النص: ${e.message || 'خطأ غير معروف'}`);
+        }
         finally { setIsLoading(false); }
     };
 
@@ -496,9 +499,9 @@ const AdminPage: React.FC<any> = (props) => {
             await db.saveSkills(updatedSkills);
             setEditingItem(null);
             if (props.refreshData) props.refreshData();
-        } catch (e) {
-            console.error(e);
-            alert("حدث خطأ أثناء حفظ المهارة");
+        } catch (e: any) {
+            console.error('Error saving skill:', e);
+            alert(`حدث خطأ أثناء حفظ المهارة: ${e.message || 'خطأ غير معروف'}`);
         }
         finally { setIsLoading(false); }
     };
@@ -509,7 +512,10 @@ const AdminPage: React.FC<any> = (props) => {
         try {
             await db.deleteSkill(id);
             if (props.refreshData) props.refreshData();
-        } catch (e) { alert("حدث خطأ أثناء حذف المهارة"); }
+        } catch (e: any) {
+            console.error('Error deleting skill:', e);
+            alert(`حدث خطأ أثناء حذف المهارة: ${e.message || 'خطأ غير معروف'}`);
+        }
         finally { setIsLoading(false); }
     };
 

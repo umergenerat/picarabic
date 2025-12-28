@@ -413,7 +413,7 @@ const ChatChannelEditForm: React.FC<{ channel: ChatChannel; onSave: (c: ChatChan
                             onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                             className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
                         >
-                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
+                            <option value="gemini-1.5-flash-001">Gemini 1.5 Flash (Fast)</option>
                             <option value="gemini-1.5-pro">Gemini 1.5 Pro (Powerful)</option>
                         </select>
                     </div>
@@ -476,10 +476,110 @@ const SpecializationEditForm: React.FC<{ specialization: Specialization; onSave:
 
 type AdminTab = 'content' | 'users' | 'reports' | 'settings';
 
+
+
+const TeamEditForm: React.FC<{ team: Team; specializations: Specialization[]; users: PlatformUser[]; onSave: (t: Team) => void; onCancel: () => void }> = ({ team, specializations, users, onSave, onCancel }) => {
+    const { t, locale } = useI18n();
+    const [formData, setFormData] = useState<Team>(team);
+
+    const handleMemberToggle = (userName: string) => {
+        const currentMembers = formData.members || [];
+        const newMembers = currentMembers.includes(userName)
+            ? currentMembers.filter(m => m !== userName)
+            : [...currentMembers, userName];
+        setFormData({ ...formData, members: newMembers });
+    };
+
+    return (
+        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-6">
+            <div className="flex justify-between items-center border-b pb-4">
+                <h3 className="text-xl font-bold">{formData.id ? 'تعديل الفريق' : 'إضافة فريق جديد'}</h3>
+                <div className="flex gap-2">
+                    <Button variant="secondary" onClick={onCancel} size="sm">إلغاء</Button>
+                    <Button type="submit" size="sm">حفظ الفريق</Button>
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <MultilingualInput
+                    label="اسم الفريق"
+                    value={formData.name}
+                    name="name"
+                    onChange={(e, lang) => setFormData({ ...formData, name: { ...formData.name, [lang]: e.target.value } })}
+                />
+
+                <div>
+                    <label className="block text-sm font-medium mb-1">التخصص</label>
+                    <select
+                        value={formData.specialization.ar}
+                        onChange={(e) => {
+                            const spec = specializations.find(s => s.name.ar === e.target.value);
+                            if (spec) setFormData({ ...formData, specialization: spec.name });
+                        }}
+                        className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
+                    >
+                        <option value="">-- اختر التخصص --</option>
+                        {specializations.map(s => <option key={s.id} value={s.name.ar}>{s.name.ar}</option>)}
+                    </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">الموعد النهائي للعرض</label>
+                        <input
+                            type="date"
+                            value={formData.dueDate ? new Date(formData.dueDate).toISOString().split('T')[0] : ''}
+                            onChange={(e) => setFormData({ ...formData, dueDate: new Date(e.target.value).toISOString() })}
+                            className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">قائد الفريق</label>
+                        <select
+                            value={formData.teamLeader}
+                            onChange={(e) => setFormData({ ...formData, teamLeader: e.target.value })}
+                            className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
+                        >
+                            <option value="">-- اختر القائد --</option>
+                            {(formData.members || []).map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                <MultilingualInput
+                    label="عنوان العرض (اختياري)"
+                    value={formData.presentationTitle || { ar: '', fr: '' }}
+                    name="presentationTitle"
+                    onChange={(e, lang) => setFormData({ ...formData, presentationTitle: { ...(formData.presentationTitle || { ar: '', fr: '' }), [lang]: e.target.value } })}
+                />
+
+                <div>
+                    <label className="block text-sm font-medium mb-2">أعضاء الفريق (اختر من المتدربين)</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 border rounded-md dark:border-slate-700">
+                        {users.map(u => (
+                            <label key={u.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 p-1 rounded">
+                                <input
+                                    type="checkbox"
+                                    checked={(formData.members || []).includes(u.name)}
+                                    onChange={() => handleMemberToggle(u.name)}
+                                    className="rounded text-primary-600 focus:ring-primary-500"
+                                />
+                                <span className={u.specialization === formData.specialization.ar ? 'font-bold text-primary-600' : ''}>
+                                    {u.name}
+                                </span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </form>
+    );
+};
+
 const AdminPage: React.FC<any> = (props) => {
     const { t, locale } = useI18n();
     const [activeTab, setActiveTab] = useState<AdminTab>('content');
-    const [activeContentType, setActiveContentType] = useState<'texts' | 'skills' | 'specializations' | 'chat-channels'>('texts');
+    const [activeContentType, setActiveContentType] = useState<'texts' | 'skills' | 'specializations' | 'chat-channels' | 'teams'>('texts');
     const [editingItem, setEditingItem] = useState<any | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [platformUsers, setPlatformUsers] = useState<PlatformUser[]>([]);
@@ -496,6 +596,8 @@ const AdminPage: React.FC<any> = (props) => {
         }
         if (activeTab === 'content') {
             loadChatChannels();
+            // Load users for team management if needed
+            if (activeContentType === 'teams') loadUsers();
         }
 
         // Diagnostic: Check current user role in DB to verify RLS
@@ -629,6 +731,27 @@ const AdminPage: React.FC<any> = (props) => {
         finally { setIsLoading(false); }
     };
 
+    const handleSaveTeam = async (team: Team) => {
+        setIsLoading(true);
+        try {
+            await db.saveTeam(team);
+            setEditingItem(null);
+            if (props.refreshData) props.refreshData();
+        } catch (e: any) {
+            alert(`حدث خطأ أثناء حفظ الفريق: ${e.message}`);
+        } finally { setIsLoading(false); }
+    };
+
+    const handleDeleteTeam = async (id: number) => {
+        if (!confirm('هل أنت متأكد من حذف هذا الفريق؟')) return;
+        setIsLoading(true);
+        try {
+            await db.deleteTeam(id);
+            if (props.refreshData) props.refreshData();
+        } catch (e) { alert("حدث خطأ أثناء حذف الفريق"); }
+        finally { setIsLoading(false); }
+    };
+
     const handleAdminPassChange = async (e: React.FormEvent) => {
         e.preventDefault();
         setAdminMsg({ text: '', type: '' });
@@ -665,10 +788,10 @@ const AdminPage: React.FC<any> = (props) => {
 
             {activeTab === 'content' && (
                 <div className="space-y-6">
-                    <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit">
-                        {['texts', 'skills', 'specializations', 'chat-channels'].map((type: any) => (
+                    <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit flex-wrap">
+                        {['texts', 'skills', 'specializations', 'chat-channels', 'teams'].map((type: any) => (
                             <button key={type} onClick={() => { setActiveContentType(type); setEditingItem(null); }} className={`px-4 py-2 text-xs font-bold rounded-md ${activeContentType === type ? 'bg-white shadow-sm text-primary-600' : 'text-slate-500'}`}>
-                                {type === 'chat-channels' ? 'قنوات الذكاء الاصطناعي' : t(`nav.${type}`)}
+                                {type === 'chat-channels' ? 'قنوات الذكاء الاصطناعي' : type === 'teams' ? 'الفرق والمجموعات' : t(`nav.${type}`)}
                             </button>
                         ))}
                     </div>
@@ -693,6 +816,14 @@ const AdminPage: React.FC<any> = (props) => {
                                 <ChatChannelEditForm
                                     channel={editingItem}
                                     onSave={handleSaveChatChannel}
+                                    onCancel={() => setEditingItem(null)}
+                                />
+                            ) : activeContentType === 'teams' ? (
+                                <TeamEditForm
+                                    team={editingItem}
+                                    specializations={props.specializations}
+                                    users={platformUsers}
+                                    onSave={handleSaveTeam}
                                     onCancel={() => setEditingItem(null)}
                                 />
                             ) : (
@@ -731,9 +862,22 @@ const AdminPage: React.FC<any> = (props) => {
                                             id: `ai-${Date.now()}`,
                                             name: { ar: '', fr: '' },
                                             iconName: 'SparklesIcon',
-                                            model: 'gemini-1.5-flash',
+                                            model: 'gemini-1.5-flash-001',
                                             defaultSystemPrompt: { ar: '', fr: '' },
                                             systemPrompt: { ar: '', fr: '' }
+                                        });
+                                    } else if (activeContentType === 'teams') {
+                                        setEditingItem({
+                                            id: Date.now(),
+                                            name: { ar: '', fr: '' },
+                                            specialization: { ar: '', fr: '' },
+                                            members: [],
+                                            teamLeader: '',
+                                            dueDate: new Date().toISOString(),
+                                            presentationTitle: { ar: '', fr: '' },
+                                            presentation: null,
+                                            presentationData: null,
+                                            videoSummaryUrl: null
                                         });
                                     } else {
                                         setEditingItem({ id: Date.now().toString(), name: { ar: '', fr: '' } });
@@ -831,108 +975,144 @@ const AdminPage: React.FC<any> = (props) => {
                                         </div>
                                     </div>
                                 ))}
+                                {activeContentType === 'teams' && props.teams.map((team: any) => (
+                                    <div key={team.id} className="py-4 flex justify-between items-center text-sm border-b last:border-0 border-slate-100 dark:border-slate-700/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors px-2 rounded-lg">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-primary-50 dark:bg-slate-700 text-primary-600 rounded-xl shadow-sm">
+                                                <UsersIcon className="h-6 w-6" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{team.name[locale]}</span>
+                                                <span className="text-xs text-slate-500 mt-0.5">{team.members?.length || 0} أعضاء - قائد: {team.teamLeader || 'غير محدد'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => setEditingItem(team)}
+                                                className="p-2 hover:bg-primary-100 hover:text-primary-600 text-slate-400 rounded-lg transition-colors"
+                                                title="تعديل"
+                                            >
+                                                <PencilIcon className="h-5 w-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteTeam(team.id)}
+                                                className="p-2 hover:bg-red-100 hover:text-red-600 text-slate-400 rounded-lg transition-colors"
+                                                title="حذف"
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </Card>
                     )}
                 </div>
-            )}
+            )
+            }
 
-            {activeTab === 'users' && (
-                <div className="space-y-6">
-                    {editingItem ? (
-                        <Card className="p-6">
-                            <UserEditForm user={editingItem} specializations={props.specializations} onSave={handleSaveUser} onCancel={() => setEditingItem(null)} />
-                        </Card>
-                    ) : (
-                        <Card className="p-6">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="font-bold">إدارة المتدربين الحالية</h3>
-                                <Button size="sm" onClick={() => setEditingItem({ name: '', email: '', role: 'متدرب', status: 'نشط', mustChangePassword: true })}>
-                                    + متدرب جديد
-                                </Button>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead><tr className="text-slate-500 border-b"><th className="pb-3 text-start">الاسم</th><th className="pb-3 text-start">التخصص</th><th className="pb-3 text-start">الحالة</th><th className="pb-3 text-center">الإجراءات</th></tr></thead>
-                                    <tbody className="divide-y">
-                                        {platformUsers.map(u => (
-                                            <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                                                <td className="py-3 font-medium">{u.name}</td>
-                                                <td className="py-3">{u.specialization}</td>
-                                                <td className="py-3"><span className={`px-2 py-0.5 rounded-full text-[10px] ${u.status === 'نشط' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{u.status}</span></td>
-                                                <td className="py-3 text-center">
-                                                    <button onClick={() => setEditingItem(u)} className="p-1 hover:text-primary-600"><PencilIcon className="h-4 w-4" /></button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </Card>
-                    )}
-                </div>
-            )}
-
-            {activeTab === 'reports' && (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <StatCard icon={UsersIcon} value={platformUsers.length} label="إجمالي المتدربين" />
-                        <StatCard icon={BookOpenIcon} value={props.texts.length} label="النصوص المنشورة" />
-                        <StatCard icon={CheckCircleIcon} value={platformUsers.filter(u => u.status === 'نشط').length} label="المتدربين النشطين" />
-                        <StatCard icon={AcademicCapIcon} value={props.specializations.length} label="الشعب المتاحة" />
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card className="p-6">
-                            <h3 className="font-bold mb-6 flex items-center gap-2"><ChartPieIcon className="h-5 w-5 text-primary-500" /> توزيع المتدربين الفعلي</h3>
-                            <div className="h-[350px]"><SimplePieChart data={specDistribution} /></div>
-                        </Card>
-                        <Card className="p-6">
-                            <h3 className="font-bold mb-4">نظرة عامة على النشاط</h3>
-                            <div className="space-y-4">
-                                <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
-                                    <p className="text-xs text-slate-500 mb-1">نسبة التسجيل في "تدبير المقاولات"</p>
-                                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                        <div className="bg-primary-500 h-full" style={{ width: '65%' }}></div>
-                                    </div>
+            {
+                activeTab === 'users' && (
+                    <div className="space-y-6">
+                        {editingItem ? (
+                            <Card className="p-6">
+                                <UserEditForm user={editingItem} specializations={props.specializations} onSave={handleSaveUser} onCancel={() => setEditingItem(null)} />
+                            </Card>
+                        ) : (
+                            <Card className="p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="font-bold">إدارة المتدربين الحالية</h3>
+                                    <Button size="sm" onClick={() => setEditingItem({ name: '', email: '', role: 'متدرب', status: 'نشط', mustChangePassword: true })}>
+                                        + متدرب جديد
+                                    </Button>
                                 </div>
-                                <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
-                                    <p className="text-xs text-slate-500 mb-1">نسبة التسجيل في "الكهرباء"</p>
-                                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                        <div className="bg-blue-500 h-full" style={{ width: '40%' }}></div>
-                                    </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead><tr className="text-slate-500 border-b"><th className="pb-3 text-start">الاسم</th><th className="pb-3 text-start">التخصص</th><th className="pb-3 text-start">الحالة</th><th className="pb-3 text-center">الإجراءات</th></tr></thead>
+                                        <tbody className="divide-y">
+                                            {platformUsers.map(u => (
+                                                <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                                                    <td className="py-3 font-medium">{u.name}</td>
+                                                    <td className="py-3">{u.specialization}</td>
+                                                    <td className="py-3"><span className={`px-2 py-0.5 rounded-full text-[10px] ${u.status === 'نشط' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{u.status}</span></td>
+                                                    <td className="py-3 text-center">
+                                                        <button onClick={() => setEditingItem(u)} className="p-1 hover:text-primary-600"><PencilIcon className="h-4 w-4" /></button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-            )}
-
-            {activeTab === 'settings' && (
-                <Card className="p-8 max-w-xl mx-auto">
-                    <div className="flex items-center gap-3 mb-8 border-b pb-4">
-                        <LockClosedIcon className="h-6 w-6 text-primary-600" />
-                        <h3 className="text-xl font-bold">إعدادات أمن الحساب (المدير)</h3>
-                    </div>
-                    <form onSubmit={handleAdminPassChange} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">كلمة المرور الحالية</label>
-                            <input type="password" value={adminCurrentPass} onChange={(e) => setAdminCurrentPass(e.target.value)} className="w-full rounded-md border-slate-300 dark:bg-slate-700" required />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">كلمة المرور الجديدة</label>
-                            <input type="password" value={adminNewPass} onChange={(e) => setAdminNewPass(e.target.value)} className="w-full rounded-md border-slate-300 dark:bg-slate-700" required />
-                        </div>
-                        {adminMsg.text && (
-                            <div className={`p-3 rounded-md text-xs flex items-center gap-2 ${adminMsg.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                {adminMsg.type === 'success' ? <CheckIcon className="h-4 w-4" /> : <ExclamationTriangleIcon className="h-4 w-4" />}
-                                {adminMsg.text}
-                            </div>
+                            </Card>
                         )}
-                        <Button type="submit" className="w-full">تحديث كلمة مرور المدير</Button>
-                    </form>
-                </Card>
-            )}
-        </div>
+                    </div>
+                )
+            }
+
+            {
+                activeTab === 'reports' && (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <StatCard icon={UsersIcon} value={platformUsers.length} label="إجمالي المتدربين" />
+                            <StatCard icon={BookOpenIcon} value={props.texts.length} label="النصوص المنشورة" />
+                            <StatCard icon={CheckCircleIcon} value={platformUsers.filter(u => u.status === 'نشط').length} label="المتدربين النشطين" />
+                            <StatCard icon={AcademicCapIcon} value={props.specializations.length} label="الشعب المتاحة" />
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <Card className="p-6">
+                                <h3 className="font-bold mb-6 flex items-center gap-2"><ChartPieIcon className="h-5 w-5 text-primary-500" /> توزيع المتدربين الفعلي</h3>
+                                <div className="h-[350px]"><SimplePieChart data={specDistribution} /></div>
+                            </Card>
+                            <Card className="p-6">
+                                <h3 className="font-bold mb-4">نظرة عامة على النشاط</h3>
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
+                                        <p className="text-xs text-slate-500 mb-1">نسبة التسجيل في "تدبير المقاولات"</p>
+                                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                            <div className="bg-primary-500 h-full" style={{ width: '65%' }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
+                                        <p className="text-xs text-slate-500 mb-1">نسبة التسجيل في "الكهرباء"</p>
+                                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                            <div className="bg-blue-500 h-full" style={{ width: '40%' }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                activeTab === 'settings' && (
+                    <Card className="p-8 max-w-xl mx-auto">
+                        <div className="flex items-center gap-3 mb-8 border-b pb-4">
+                            <LockClosedIcon className="h-6 w-6 text-primary-600" />
+                            <h3 className="text-xl font-bold">إعدادات أمن الحساب (المدير)</h3>
+                        </div>
+                        <form onSubmit={handleAdminPassChange} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">كلمة المرور الحالية</label>
+                                <input type="password" value={adminCurrentPass} onChange={(e) => setAdminCurrentPass(e.target.value)} className="w-full rounded-md border-slate-300 dark:bg-slate-700" required />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">كلمة المرور الجديدة</label>
+                                <input type="password" value={adminNewPass} onChange={(e) => setAdminNewPass(e.target.value)} className="w-full rounded-md border-slate-300 dark:bg-slate-700" required />
+                            </div>
+                            {adminMsg.text && (
+                                <div className={`p-3 rounded-md text-xs flex items-center gap-2 ${adminMsg.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {adminMsg.type === 'success' ? <CheckIcon className="h-4 w-4" /> : <ExclamationTriangleIcon className="h-4 w-4" />}
+                                    {adminMsg.text}
+                                </div>
+                            )}
+                            <Button type="submit" className="w-full">تحديث كلمة مرور المدير</Button>
+                        </form>
+                    </Card>
+                )
+            }
+        </div >
     );
 };
 

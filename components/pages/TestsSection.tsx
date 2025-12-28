@@ -34,7 +34,11 @@ const TestsSection: React.FC<TestsSectionProps> = ({ testContexts }) => {
         setShowScore(false);
         try {
             const apiKey = await getApiKey();
-            const generatedQuestions = await generateQuiz(sampleContext, apiKey);
+            const channels = await import('../../services/dataService').then(m => m.getChatChannels());
+            const testExpert = channels.find(c => c.id === 'test-expert');
+            const model = testExpert?.model || 'gemini-1.5-flash-001';
+
+            const generatedQuestions = await generateQuiz(sampleContext, apiKey, model);
             setQuestions(generatedQuestions);
         } catch (err: any) {
             setError(err.message || t('texts.errorQuiz'));

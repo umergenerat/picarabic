@@ -54,7 +54,7 @@ export const initialChatChannels: ChatChannel[] = [
         id: 'smart-support',
         name: { ar: 'مركز الدعم الذكي', fr: 'Support Intelligent' },
         iconName: 'InformationCircleIcon',
-        model: 'gemini-1.5-flash',
+        model: 'gemini-1.5-flash-001',
         defaultSystemPrompt: {
             ar: 'أنت مساعد الدعم الفني للمنصة التعليمية ISTA TATA. مهمتك هي مساعدة الطلاب في استخدام المنصة، شرح المميزات، وحل المشكلات التقنية البسيطة. كن ودوداً ومختصراً.',
             fr: 'Vous êtes l\'assistant support technique de la plateforme ISTA TATA...'
@@ -68,7 +68,7 @@ export const initialChatChannels: ChatChannel[] = [
         id: 'test-expert',
         name: { ar: 'خبير الاختبارات الذكي', fr: 'Expert Tests' },
         iconName: 'BeakerIcon',
-        model: 'gemini-1.5-flash',
+        model: 'gemini-1.5-flash-001',
         defaultSystemPrompt: {
             ar: 'أنت خبير في تقييم المعارف. مهمتك هي إجراء اختبارات تفاعلية قصيرة للطلاب بناءً على تخصصاتهم. اطرح سؤالاً واحداً في كل مرة وانتظر الإجابة.',
             fr: 'Expert en évaluation... Proposez un quiz interactif.'
@@ -82,7 +82,7 @@ export const initialChatChannels: ChatChannel[] = [
         id: 'comm-expert',
         name: { ar: 'خبير التواصل المهني', fr: 'Expert Comm' },
         iconName: 'ChatBubbleLeftRightIcon',
-        model: 'gemini-1.5-flash',
+        model: 'gemini-1.5-flash-001',
         defaultSystemPrompt: { ar: 'أنت مساعد أكاديمي متخصص في التواصل المهني...', fr: 'Expert assistant en communication...' },
         systemPrompt: { ar: 'أنت مساعد أكاديمي متخصص في التواصل المهني...', fr: 'Expert assistant en communication...' },
     },
@@ -90,7 +90,7 @@ export const initialChatChannels: ChatChannel[] = [
         id: 'soft-skills-expert',
         name: { ar: 'خبير المهارات الناعمة', fr: 'Expert Soft Skills' },
         iconName: 'SparklesIcon',
-        model: 'gemini-1.5-flash',
+        model: 'gemini-1.5-flash-001',
         defaultSystemPrompt: {
             ar: 'أنت مدرب تطوير ذاتي متخصص في المهارات الناعمة (Soft Skills) مثل العمل الجماعي، القيادة، والذكاء العاطفي. مهمتك هي مساعدة المتدربين على تطوير هذه المهارات من خلال النصائح والتمارين.',
             fr: 'Vous êtes un coach en développement personnel spécialisé dans les Soft Skills...'

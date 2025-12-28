@@ -45,7 +45,7 @@ export const textToSpeech = async (text: string, apiKey?: string): Promise<strin
         const ai = getAiClient(apiKey);
         console.log('TTS request for:', text.substring(0, 20) + '...');
         const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: "gemini-1.5-flash-001",
             contents: [{ parts: [{ text: `انطق النص التالي بوضوح وبلغة عربية فصحى: ${text}` }] }],
             config: {
                 responseModalities: [Modality.AUDIO],
@@ -91,11 +91,11 @@ const questionGenerationSchema = {
     }
 };
 
-export const generateQuiz = async (context: string, apiKey?: string): Promise<QuizQuestion[]> => {
+export const generateQuiz = async (context: string, apiKey?: string, model: string = "gemini-1.5-flash-001"): Promise<QuizQuestion[]> => {
     try {
         const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: model,
             contents: `أنت خبير تربوي. بناءً على النص القادم، قم بإنشاء 5 أسئلة اختيار من متعدد نوعية وعميقة باللغة العربية لاختبار فهم المتدرب وتطبيقه للمفاهيم. يجب أن يكون لكل سؤال أربعة خيارات ذكية (مشتتات واقعية)، مع تحديد الإجابة الصحيحة. النص هو: """${context}"""`,
             config: {
                 responseMimeType: "application/json",
@@ -115,11 +115,11 @@ export const generateQuiz = async (context: string, apiKey?: string): Promise<Qu
     }
 };
 
-export const evaluateAnswer = async (context: string, question: string, answer: string, apiKey?: string): Promise<string> => {
+export const evaluateAnswer = async (context: string, question: string, answer: string, apiKey?: string, model: string = "gemini-1.5-flash-001"): Promise<string> => {
     try {
         const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: model,
             contents: `أنت خبير تعليمي محفز. قيم إجابة المتدرب التالية بدقة بناءً على النص والسؤال المرفقين. قدم ملاحظات بناءة، حدد نقاط القوة، وقدم نصيحة للتحسين إذا لزم الأمر. استخدم لغة عربية مهنية ومشجعة.\n\nالسياق: ${context}\nالسؤال: ${question}\nإجابة المتدرب: ${answer}`
         });
         return response.text;
@@ -138,11 +138,11 @@ const skillScenarioSchema = {
     required: ["scenario", "question"]
 };
 
-export const generateSkillScenario = async (skillTitle: string, skillDescription: string, specialization: string, apiKey?: string): Promise<{ scenario: string; question: string; }> => {
+export const generateSkillScenario = async (skillTitle: string, skillDescription: string, specialization: string, apiKey?: string, model: string = "gemini-1.5-flash-001"): Promise<{ scenario: string; question: string; }> => {
     try {
         const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: model,
             contents: `أنت مدرب تطوير مهني وخبير في المهارات الناعمة (Soft Skills). 
             المطلوب: إنشاء سيناريو واقعي وتحدي مهني للمهارة: '${skillTitle}'. 
             الوصف: ${skillDescription}. 
@@ -168,11 +168,11 @@ export const generateSkillScenario = async (skillTitle: string, skillDescription
     }
 };
 
-export const evaluateSkillAnswer = async (skillTitle: string, scenario: string, userAnswer: string, apiKey?: string): Promise<string> => {
+export const evaluateSkillAnswer = async (skillTitle: string, scenario: string, userAnswer: string, apiKey?: string, model: string = "gemini-1.5-flash-001"): Promise<string> => {
     try {
         const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: model,
             contents: `أنت مدرب مهارات حياتية ومهنية (Soft Skills Coach). 
             قم بتقييم استجابة المتدرب لمهارة '${skillTitle}' بناءً على السيناريو التالي: 
             ---

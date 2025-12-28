@@ -33,7 +33,11 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
             setError('');
             try {
                 const apiKey = await getApiKey();
-                const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, apiKey);
+                const channels = await import('../../services/dataService').then(m => m.getChatChannels());
+                const expert = channels.find(c => c.id === 'soft-skills-expert');
+                const model = expert?.model || 'gemini-1.5-flash-001';
+
+                const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, apiKey, model);
                 setScenario(result.scenario);
                 setQuestion(result.question);
             } catch (err) {
@@ -52,7 +56,11 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
         setFeedback('');
         try {
             const apiKey = await getApiKey();
-            const result = await evaluateSkillAnswer(skill.title[locale], `${scenario}\n${question}`, userAnswer, apiKey);
+            const channels = await import('../../services/dataService').then(m => m.getChatChannels());
+            const expert = channels.find(c => c.id === 'soft-skills-expert');
+            const model = expert?.model || 'gemini-1.5-flash-001';
+
+            const result = await evaluateSkillAnswer(skill.title[locale], `${scenario}\n${question}`, userAnswer, apiKey, model);
             setFeedback(result);
         } catch (err) {
             setError(t('texts.errorEval'));

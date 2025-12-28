@@ -7,6 +7,7 @@ import Spinner from '../common/Spinner';
 import { evaluateAnswer, textToSpeech, decodeBase64, decodeAudioData } from '../../services/geminiService';
 import { LightBulbIcon, XMarkIcon, CheckCircleIcon, SpeakerWaveIcon, SparklesIcon, BookOpenIcon, iconMap } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
+import { useAi } from '../../contexts/AiContext';
 import ConfirmationModal from '../common/ConfirmationModal';
 
 interface TextsSectionProps {
@@ -25,6 +26,7 @@ const DifficultyBadge: React.FC<{ level: DifficultyLevel }> = ({ level }) => {
 
 const TextsSection: React.FC<TextsSectionProps> = ({ texts, skills }) => {
     const { t, locale } = useI18n();
+    const { getApiKey } = useAi();
     const [selectedText, setSelectedText] = useState<TextData | null>(null);
     const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
     const [userAnswer, setUserAnswer] = useState('');
@@ -84,7 +86,8 @@ const TextsSection: React.FC<TextsSectionProps> = ({ texts, skills }) => {
 
         setIsSpeaking(true);
         try {
-            const base64Audio = await textToSpeech(textToSpeak);
+            const apiKey = await getApiKey();
+            const base64Audio = await textToSpeech(textToSpeak, apiKey);
             if (!audioContextRef.current) {
                 audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
             }
@@ -124,7 +127,8 @@ const TextsSection: React.FC<TextsSectionProps> = ({ texts, skills }) => {
             setError('');
             setFeedback('');
             try {
-                const result = await evaluateAnswer(selectedText.content[locale], selectedQuestion.text[locale], userAnswer.trim());
+                const apiKey = await getApiKey();
+                const result = await evaluateAnswer(selectedText.content[locale], selectedQuestion.text[locale], userAnswer.trim(), apiKey);
                 setFeedback(result);
             } catch (err: any) {
                 setError(err.message || t('texts.errorEval'));

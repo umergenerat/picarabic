@@ -7,6 +7,7 @@ import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, Speake
 import { useI18n } from '../../contexts/I18nContext';
 import { GoogleGenAI, Chat, GenerateContentResponse } from '@google/genai';
 import { textToSpeech, decodeBase64, decodeAudioData } from '../../services/geminiService';
+import { useAi } from '../../contexts/AiContext';
 import Avatar from '../common/Avatar';
 import { getChatHistory, saveChatHistory } from '../../services/dataService';
 
@@ -96,6 +97,7 @@ interface ChatSectionProps {
 
 const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatChannels, initialChannelId }) => {
     const { t, locale } = useI18n();
+    const { getApiKey } = useAi();
     const [activeChannelId, setActiveChannelId] = useState<string | null>(initialChannelId || (chatChannels.length > 0 ? chatChannels[0].id : null));
     const activeChannel = chatChannels.find(c => c.id === activeChannelId) || null;
 
@@ -149,7 +151,8 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         setSpeakingId(message.id);
 
         try {
-            const base64Audio = await textToSpeech(message.text);
+            const apiKey = await getApiKey();
+            const base64Audio = await textToSpeech(message.text, apiKey);
             if (!audioContextRef.current) {
                 audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
             }
@@ -168,11 +171,11 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         }
     };
 
-    const initializeChannel = useCallback((channel: ChatChannel) => {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-        if (!apiKey) return;
-
+    const initializeChannel = useCallback(async (channel: ChatChannel) => {
         try {
+            const apiKey = await getApiKey();
+            if (!apiKey) return;
+
             const ai = new GoogleGenAI({ apiKey });
             chatSession.current = ai.chats.create({
                 model: channel.model || 'gemini-3-flash-preview',

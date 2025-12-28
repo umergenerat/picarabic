@@ -21,6 +21,7 @@ import { HomeIcon, BookOpenIcon, SparklesIcon, PresentationChartBarIcon, BeakerI
 import { useI18n } from './contexts/I18nContext';
 import { supabase } from './services/supabaseClient';
 import SmartSupportButton from './components/common/SmartSupportButton';
+import AiKeyModal from './components/common/AiKeyModal';
 
 const navItems: Omit<NavItem, 'label'>[] = [
     { id: 'home', labelKey: 'nav.home', icon: HomeIcon, adminOnly: false },
@@ -234,6 +235,7 @@ const App: React.FC = () => {
                 setActiveChatChannelId('smart-support');
                 setActivePage('chat');
             }} />
+            <AiKeyModal />
         </div>
     );
 };

@@ -4,6 +4,7 @@ import App from './App';
 import './index.css';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { I18nProvider } from './contexts/I18nContext';
+import { AiProvider } from './contexts/AiContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -15,7 +16,9 @@ root.render(
   <React.StrictMode>
     <I18nProvider>
       <ThemeProvider>
-        <App />
+        <AiProvider>
+          <App />
+        </AiProvider>
       </ThemeProvider>
     </I18nProvider>
   </React.StrictMode>

@@ -5,6 +5,7 @@ import Button from '../common/Button';
 import Spinner from '../common/Spinner';
 import { iconMap, SparklesIcon, CheckCircleIcon, LightBulbIcon, XMarkIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
+import { useAi } from '../../contexts/AiContext';
 import { generateSkillScenario, evaluateSkillAnswer } from '../../services/geminiService';
 
 interface SkillPracticeModalProps {
@@ -17,6 +18,7 @@ interface SkillPracticeModalProps {
 
 const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, specialization, onClose, onComplete, onConsultExpert }) => {
     const { t, locale } = useI18n();
+    const { getApiKey } = useAi();
     const [scenario, setScenario] = useState('');
     const [question, setQuestion] = useState('');
     const [userAnswer, setUserAnswer] = useState('');
@@ -30,7 +32,8 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
             setIsLoadingScenario(true);
             setError('');
             try {
-                const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization);
+                const apiKey = await getApiKey();
+                const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, apiKey);
                 setScenario(result.scenario);
                 setQuestion(result.question);
             } catch (err) {
@@ -48,7 +51,8 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
         setError('');
         setFeedback('');
         try {
-            const result = await evaluateSkillAnswer(skill.title[locale], `${scenario}\n${question}`, userAnswer);
+            const apiKey = await getApiKey();
+            const result = await evaluateSkillAnswer(skill.title[locale], `${scenario}\n${question}`, userAnswer, apiKey);
             setFeedback(result);
         } catch (err) {
             setError(t('texts.errorEval'));

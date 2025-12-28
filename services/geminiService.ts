@@ -2,10 +2,10 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { QuizQuestion } from '../types';
 
-const getAiClient = () => {
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const getAiClient = (apiKey?: string) => {
+    const API_KEY = apiKey || import.meta.env.VITE_GEMINI_API_KEY;
     if (!API_KEY) {
-        throw new Error("VITE_GEMINI_API_KEY environment variable not set. AI features are unavailable.");
+        throw new Error("No API key provided. AI features are unavailable.");
     }
     return new GoogleGenAI({ apiKey: API_KEY });
 };
@@ -40,9 +40,9 @@ export const decodeAudioData = async (
     return buffer;
 };
 
-export const textToSpeech = async (text: string): Promise<string> => {
+export const textToSpeech = async (text: string, apiKey?: string): Promise<string> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(apiKey);
         console.log('TTS request for:', text.substring(0, 20) + '...');
         const response = await ai.models.generateContent({
             model: "gemini-1.5-flash",
@@ -91,9 +91,9 @@ const questionGenerationSchema = {
     }
 };
 
-export const generateQuiz = async (context: string): Promise<QuizQuestion[]> => {
+export const generateQuiz = async (context: string, apiKey?: string): Promise<QuizQuestion[]> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
             model: "gemini-1.5-flash",
             contents: `أنت خبير تربوي. بناءً على النص القادم، قم بإنشاء 5 أسئلة اختيار من متعدد نوعية وعميقة باللغة العربية لاختبار فهم المتدرب وتطبيقه للمفاهيم. يجب أن يكون لكل سؤال أربعة خيارات ذكية (مشتتات واقعية)، مع تحديد الإجابة الصحيحة. النص هو: """${context}"""`,
@@ -115,9 +115,9 @@ export const generateQuiz = async (context: string): Promise<QuizQuestion[]> => 
     }
 };
 
-export const evaluateAnswer = async (context: string, question: string, answer: string): Promise<string> => {
+export const evaluateAnswer = async (context: string, question: string, answer: string, apiKey?: string): Promise<string> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
             model: "gemini-1.5-flash",
             contents: `أنت خبير تعليمي محفز. قيم إجابة المتدرب التالية بدقة بناءً على النص والسؤال المرفقين. قدم ملاحظات بناءة، حدد نقاط القوة، وقدم نصيحة للتحسين إذا لزم الأمر. استخدم لغة عربية مهنية ومشجعة.\n\nالسياق: ${context}\nالسؤال: ${question}\nإجابة المتدرب: ${answer}`
@@ -138,9 +138,9 @@ const skillScenarioSchema = {
     required: ["scenario", "question"]
 };
 
-export const generateSkillScenario = async (skillTitle: string, skillDescription: string, specialization: string): Promise<{ scenario: string; question: string; }> => {
+export const generateSkillScenario = async (skillTitle: string, skillDescription: string, specialization: string, apiKey?: string): Promise<{ scenario: string; question: string; }> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
             model: "gemini-1.5-flash",
             contents: `أنت مدرب تطوير مهني وخبير في المهارات الناعمة (Soft Skills). 
@@ -168,9 +168,9 @@ export const generateSkillScenario = async (skillTitle: string, skillDescription
     }
 };
 
-export const evaluateSkillAnswer = async (skillTitle: string, scenario: string, userAnswer: string): Promise<string> => {
+export const evaluateSkillAnswer = async (skillTitle: string, scenario: string, userAnswer: string, apiKey?: string): Promise<string> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
             model: "gemini-1.5-flash",
             contents: `أنت مدرب مهارات حياتية ومهنية (Soft Skills Coach). 

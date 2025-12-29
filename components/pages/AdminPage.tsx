@@ -304,6 +304,119 @@ const TextEditForm: React.FC<{ text: TextData; skills: Skill[]; specializations:
                                     setFormData({ ...formData, questions: newQs });
                                 }} />
                             </div>
+
+                            {/* MCQ Answer Options */}
+                            <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                                <div className="flex justify-between items-center mb-4">
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                                        خيارات الإجابة (اختيار من متعدد)
+                                    </label>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => {
+                                            const newQs = [...formData.questions];
+                                            const currentOptions = newQs[idx].options || [];
+                                            newQs[idx] = {
+                                                ...newQs[idx],
+                                                options: [
+                                                    ...currentOptions,
+                                                    {
+                                                        id: `opt-${Date.now()}-${currentOptions.length}`,
+                                                        text: { ar: '', fr: '' }
+                                                    }
+                                                ]
+                                            };
+                                            setFormData({ ...formData, questions: newQs });
+                                        }}
+                                    >
+                                        + إضافة خيار
+                                    </Button>
+                                </div>
+
+                                {(!q.options || q.options.length === 0) ? (
+                                    <p className="text-xs text-slate-500 italic">
+                                        أضف خيارات لتحويل هذا السؤال إلى اختيار من متعدد. إذا لم تضف خيارات، سيكون سؤالاً مفتوحاً.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {q.options.map((option, optIdx) => (
+                                            <div
+                                                key={option.id}
+                                                className="flex gap-3 items-start bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border-2 border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-all"
+                                            >
+                                                {/* Radio button for correct answer */}
+                                                <div className="flex items-center pt-7">
+                                                    <input
+                                                        type="radio"
+                                                        name={`correct-answer-${idx}`}
+                                                        checked={q.correctAnswerId === option.id}
+                                                        onChange={() => {
+                                                            const newQs = [...formData.questions];
+                                                            newQs[idx] = { ...newQs[idx], correctAnswerId: option.id };
+                                                            setFormData({ ...formData, questions: newQs });
+                                                        }}
+                                                        className="h-5 w-5 text-green-600 focus:ring-green-500 focus:ring-2"
+                                                        title="حدد كإجابة صحيحة"
+                                                    />
+                                                </div>
+
+                                                {/* Option text inputs */}
+                                                <div className="flex-grow">
+                                                    <MultilingualInput
+                                                        label={`الخيار ${optIdx + 1}`}
+                                                        value={option.text}
+                                                        name={`q-${idx}-opt-${optIdx}`}
+                                                        onChange={(e, lang) => {
+                                                            const newQs = [...formData.questions];
+                                                            const newOptions = [...(newQs[idx].options || [])];
+                                                            newOptions[optIdx] = {
+                                                                ...newOptions[optIdx],
+                                                                text: { ...newOptions[optIdx].text, [lang]: e.target.value }
+                                                            };
+                                                            newQs[idx] = { ...newQs[idx], options: newOptions };
+                                                            setFormData({ ...formData, questions: newQs });
+                                                        }}
+                                                    />
+                                                    {q.correctAnswerId === option.id && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] text-green-600 font-bold mt-1">
+                                                            <CheckCircleIcon className="h-3 w-3" />
+                                                            الإجابة الصحيحة
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Remove option button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newQs = [...formData.questions];
+                                                        const newOptions = (newQs[idx].options || []).filter((_, i) => i !== optIdx);
+                                                        newQs[idx] = {
+                                                            ...newQs[idx],
+                                                            options: newOptions,
+                                                            correctAnswerId: newQs[idx].correctAnswerId === option.id ? undefined : newQs[idx].correctAnswerId
+                                                        };
+                                                        setFormData({ ...formData, questions: newQs });
+                                                    }}
+                                                    className="mt-7 p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                    title="حذف الخيار"
+                                                >
+                                                    <TrashIcon className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+
+                                        {q.options && q.options.length > 0 && !q.correctAnswerId && (
+                                            <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg text-xs">
+                                                <ExclamationTriangleIcon className="h-4 w-4 flex-shrink-0" />
+                                                <span>تنبيه: لم تحدد الإجابة الصحيحة بعد. استخدم الدائرة بجانب الخيار الصحيح.</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </Card>
                     ))}
                 </div>

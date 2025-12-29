@@ -413,7 +413,7 @@ const ChatChannelEditForm: React.FC<{ channel: ChatChannel; onSave: (c: ChatChan
                             onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                             className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
                         >
-                            <option value="gemini-1.5-flash-001">Gemini 1.5 Flash (Fast)</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
                             <option value="gemini-1.5-pro">Gemini 1.5 Pro (Powerful)</option>
                         </select>
                     </div>
@@ -862,7 +862,7 @@ const AdminPage: React.FC<any> = (props) => {
                                             id: `ai-${Date.now()}`,
                                             name: { ar: '', fr: '' },
                                             iconName: 'SparklesIcon',
-                                            model: 'gemini-1.5-flash-001',
+                                            model: 'gemini-1.5-flash',
                                             defaultSystemPrompt: { ar: '', fr: '' },
                                             systemPrompt: { ar: '', fr: '' }
                                         });

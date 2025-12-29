@@ -45,7 +45,7 @@ export const textToSpeech = async (text: string, apiKey?: string): Promise<strin
         const ai = getAiClient(apiKey);
         console.log('TTS request for:', text.substring(0, 20) + '...');
         const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash-001",
+            model: "gemini-1.5-flash",
             contents: [{ parts: [{ text: `انطق النص التالي بوضوح وبلغة عربية فصحى: ${text}` }] }],
             config: {
                 responseModalities: [Modality.AUDIO],
@@ -91,7 +91,7 @@ const questionGenerationSchema = {
     }
 };
 
-export const generateQuiz = async (context: string, apiKey?: string, model: string = "gemini-1.5-flash-001"): Promise<QuizQuestion[]> => {
+export const generateQuiz = async (context: string, apiKey?: string, model: string = "gemini-1.5-flash"): Promise<QuizQuestion[]> => {
     try {
         const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
@@ -115,7 +115,7 @@ export const generateQuiz = async (context: string, apiKey?: string, model: stri
     }
 };
 
-export const evaluateAnswer = async (context: string, question: string, answer: string, apiKey?: string, model: string = "gemini-1.5-flash-001"): Promise<string> => {
+export const evaluateAnswer = async (context: string, question: string, answer: string, apiKey?: string, model: string = "gemini-1.5-flash"): Promise<string> => {
     try {
         const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({
@@ -138,7 +138,7 @@ const skillScenarioSchema = {
     required: ["scenario", "question"]
 };
 
-export const generateSkillScenario = async (skillTitle: string, skillDescription: string, specialization: string, apiKey?: string, model: string = "gemini-1.5-flash-001"): Promise<{ scenario: string; question: string; }> => {
+export const generateSkillScenario = async (skillTitle: string, skillDescription: string, specialization: string, apiKey?: string, model: string = "gemini-1.5-flash"): Promise<{ scenario: string; question: string; }> => {
     try {
         const ai = getAiClient(apiKey);
         console.log('Calling Gemini API for skill scenario generation...');
@@ -182,7 +182,7 @@ export const generateSkillScenario = async (skillTitle: string, skillDescription
     }
 };
 
-export const evaluateSkillAnswer = async (skillTitle: string, scenario: string, userAnswer: string, apiKey?: string, model: string = "gemini-1.5-flash-001"): Promise<string> => {
+export const evaluateSkillAnswer = async (skillTitle: string, scenario: string, userAnswer: string, apiKey?: string, model: string = "gemini-1.5-flash"): Promise<string> => {
     try {
         const ai = getAiClient(apiKey);
         const response = await ai.models.generateContent({

@@ -36,7 +36,7 @@ const TestsSection: React.FC<TestsSectionProps> = ({ testContexts }) => {
             const apiKey = await getApiKey();
             const channels = await import('../../services/dataService').then(m => m.getChatChannels());
             const testExpert = channels.find(c => c.id === 'test-expert');
-            const model = testExpert?.model || 'gemini-1.5-flash-001';
+            const model = testExpert?.model || 'gemini-1.5-flash';
 
             const generatedQuestions = await generateQuiz(sampleContext, apiKey, model);
             setQuestions(generatedQuestions);

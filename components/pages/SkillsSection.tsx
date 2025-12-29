@@ -37,17 +37,19 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                 const expert = channels.find(c => c.id === 'soft-skills-expert');
                 const model = expert?.model || 'gemini-1.5-flash-001';
 
+                console.log('Generating skill scenario for:', skill.title[locale], 'with specialization:', specialization);
                 const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, apiKey, model);
                 setScenario(result.scenario);
                 setQuestion(result.question);
-            } catch (err) {
-                setError(t('skills.errorScenario'));
+            } catch (err: any) {
+                console.error('Error generating skill scenario:', err);
+                setError(err.message || t('skills.errorScenario'));
             } finally {
                 setIsLoadingScenario(false);
             }
         };
         fetchScenario();
-    }, [skill, specialization, locale, t]);
+    }, [skill, specialization, locale, t, getApiKey]);
 
     const handleEvaluate = async () => {
         if (!userAnswer.trim()) return;
@@ -227,6 +229,7 @@ const SkillCard: React.FC<SkillCardProps> = ({ skill, isCompleted, onPractice })
 };
 
 interface SkillsSectionProps {
+    skills: Skill[];
     completedSkills: number[];
     setCompletedSkills: React.Dispatch<React.SetStateAction<number[]>>;
     specializations: Specialization[];

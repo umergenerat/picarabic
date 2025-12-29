@@ -141,6 +141,7 @@ const skillScenarioSchema = {
 export const generateSkillScenario = async (skillTitle: string, skillDescription: string, specialization: string, apiKey?: string, model: string = "gemini-1.5-flash-001"): Promise<{ scenario: string; question: string; }> => {
     try {
         const ai = getAiClient(apiKey);
+        console.log('Calling Gemini API for skill scenario generation...');
         const response = await ai.models.generateContent({
             model: model,
             contents: `أنت مدرب تطوير مهني وخبير في المهارات الناعمة (Soft Skills). 
@@ -161,10 +162,23 @@ export const generateSkillScenario = async (skillTitle: string, skillDescription
             text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
         }
         console.log('Parsed Scenario JSON:', text);
+
+        if (!text) {
+            throw new Error("لم يتم استلام استجابة من الذكاء الاصطناعي. تأكد من صحة مفتاح API.");
+        }
+
         return JSON.parse(text);
     } catch (error: any) {
         console.error("Error generating skill scenario:", error);
-        throw new Error("فشل في إنشاء سيناريو التمرين.");
+        // Provide more specific error messages
+        if (error.message?.includes('API key')) {
+            throw new Error("مفتاح API غير صالح أو مفقود. الرجاء إدخال مفتاح صحيح.");
+        } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+            throw new Error("خطأ في الاتصال بالشبكة. تحقق من اتصالك بالإنترنت.");
+        } else if (error.message?.includes('JSON')) {
+            throw new Error("خطأ في تحليل استجابة الذكاء الاصطناعي. الرجاء المحاولة مرة أخرى.");
+        }
+        throw new Error(error.message || "فشل في إنشاء سيناريو التمرين. الرجاء المحاولة لاحقاً.");
     }
 };
 

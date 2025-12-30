@@ -113,8 +113,25 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
 
         if (error) throw error;
 
-        // The trigger 'on_auth_user_created' should handle the profile creation automatically.
-        // We don't need to manually insert into profiles to avoid duplicate key errors.
+        // Explicitly insert/upsert the profile to ensure data persistence
+        // The trigger might fail or be slow, so we do this manually since we are an Admin
+        const { error: profileError } = await supabase.from('profiles').upsert({
+            id: data.user!.id,
+            email: user.email,
+            display_name: user.name,
+            role: user.role,
+            specialization: user.specialization,
+            phone: user.phone || null,
+            status: user.status,
+            must_change_password: true // Force password change for new users
+        });
+
+        if (profileError) {
+            console.warn('Manual profile creation failed, relying on trigger/metadata:', profileError);
+            // Verify if trigger worked by fetching
+            const { data: check } = await supabase.from('profiles').select('id').eq('id', data.user!.id).single();
+            if (!check) throw new Error('فشل إنشاء الملف الشخصي (Profile check failed)');
+        }
     } else {
         // Case 2: Existing User - Update profile data
         const { error } = await supabase.from('profiles').update({

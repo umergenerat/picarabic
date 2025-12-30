@@ -94,20 +94,41 @@ export const getUsers = async (): Promise<PlatformUser[]> => {
 export const saveUser = async (user: PlatformUser): Promise<void> => {
     if (!supabase) return;
 
-    // In production, setting another user's password usually happens via a trigger or Edge Function.
-    // Here we ensure the profile data is synchronized.
-    const { error } = await supabase.from('profiles').upsert({
-        id: user.id, // Supabase uses UUID for ID if linked to Auth
-        display_name: user.name,
-        email: user.email,
-        phone: user.phone,
-        specialization: user.specialization,
-        role: user.role,
-        status: user.status,
-        must_change_password: user.mustChangePassword || false
-    });
+    if (!user.id) {
+        // Case 1: New User - Must create in Auth first
+        // Note: usage of signUp on client side may sign in the new user immediately depending on configuration.
+        const { data, error } = await supabase.auth.signUp({
+            email: user.email,
+            password: user.password || '12345678', // Default password if not provided
+            options: {
+                data: {
+                    display_name: user.name,
+                    role: user.role,
+                    specialization: user.specialization,
+                    phone: user.phone,
+                    status: user.status
+                }
+            }
+        });
 
-    if (error) throw error;
+        if (error) throw error;
+
+        // The trigger 'on_auth_user_created' should handle the profile creation automatically.
+        // We don't need to manually insert into profiles to avoid duplicate key errors.
+    } else {
+        // Case 2: Existing User - Update profile data
+        const { error } = await supabase.from('profiles').update({
+            display_name: user.name,
+            email: user.email, // Note: Email update in Auth requires different flow, this only updates profile display
+            phone: user.phone,
+            specialization: user.specialization,
+            role: user.role,
+            status: user.status,
+            must_change_password: user.mustChangePassword || false
+        }).eq('id', user.id);
+
+        if (error) throw error;
+    }
 };
 
 export const deleteUser = async (id: any): Promise<void> => {

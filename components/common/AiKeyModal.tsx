@@ -25,10 +25,11 @@ const AiKeyModal: React.FC = () => {
             setError(t('chat.apiKeyRequired') || 'يرجى إدخال مفتاح API');
             return;
         }
-        if (!inputValue.startsWith('AIza')) {
-            setError(t('chat.apiKeyInvalid') || 'مفتاح API غير صالح. يجب أن يبدأ بـ AIza');
-            return;
-        }
+        // Accepted any key as requested
+        // if (!inputValue.startsWith('AIza')) {
+        //     setError(t('chat.apiKeyInvalid') || 'مفتاح API غير صالح. يجب أن يبدأ بـ AIza');
+        //     return;
+        // }
         setApiKey(inputValue.trim());
         setError('');
     };
@@ -82,8 +83,8 @@ const AiKeyModal: React.FC = () => {
                                         setError('');
                                     }}
                                     className={`w-full ps-10 pe-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-2 rounded-xl transition-all outline-none text-slate-900 dark:text-white font-mono text-sm ${error
-                                            ? 'border-red-500 ring-4 ring-red-500/10'
-                                            : 'border-slate-200 dark:border-slate-700 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10'
+                                        ? 'border-red-500 ring-4 ring-red-500/10'
+                                        : 'border-slate-200 dark:border-slate-700 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10'
                                         }`}
                                     placeholder="AIzaSyB..."
                                 />

@@ -185,7 +185,13 @@ exception when others then null; end $$;
 
 do $$ 
 begin 
-    execute 'create policy "Admins can update all profiles" on profiles for all using (is_admin())';
+    -- Drop the recursive 'for all' policy if it exists
+    execute 'drop policy if exists "Admins can update all profiles" on profiles';
+    
+    -- Create specific policies for write operations to avoid recursion on select
+    execute 'create policy "Admins can insert profiles" on profiles for insert with check (is_admin())';
+    execute 'create policy "Admins can update profiles" on profiles for update using (is_admin())';
+    execute 'create policy "Admins can delete profiles" on profiles for delete using (is_admin())';
 exception when others then null; end $$;
 
 -- Texts Policies

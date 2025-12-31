@@ -94,61 +94,63 @@ export const getUsers = async (): Promise<PlatformUser[]> => {
 export const saveUser = async (user: PlatformUser): Promise<void> => {
     if (!supabase) return;
 
-    if (!user.id) {
-        // Case 1: New User - Must create in Auth first
-        // Note: usage of signUp on client side may sign in the new user immediately depending on configuration.
-        const { data, error } = await supabase.auth.signUp({
-            email: user.email,
-            password: user.password || '12345678', // Default password if not provided
-            options: {
-                data: {
-                    display_name: user.name,
-                    role: user.role,
-                    specialization: user.specialization,
-                    phone: user.phone,
-                    status: user.status
+    try {
+        if (!user.id) {
+            // Case 1: New User - Must create in Auth first
+            const { data, error } = await supabase.auth.signUp({
+                email: user.email,
+                password: user.password || '12345678', // Default password if not provided
+                options: {
+                    data: {
+                        display_name: user.name,
+                        role: user.role,
+                        specialization: user.specialization,
+                        phone: user.phone,
+                        status: user.status
+                    }
                 }
+            });
+
+            if (error) throw error;
+            if (!data.user) throw new Error("فشل إنشاء مستخدم جديد في نظام الهوية");
+
+            // Explicitly insert/upsert the profile to ensure data persistence
+            const { error: profileError } = await supabase.from('profiles').upsert({
+                id: data.user.id,
+                email: user.email,
+                display_name: user.name,
+                role: user.role,
+                specialization: user.specialization,
+                phone: user.phone || null,
+                status: user.status || 'نشط',
+                must_change_password: user.mustChangePassword !== undefined ? user.mustChangePassword : true
+            });
+
+            if (profileError) {
+                console.error('Manual profile creation failed:', profileError);
+                throw new Error(`فشل إنشاء ملف المستخدم: ${profileError.message}`);
             }
-        });
+        } else {
+            // Case 2: Existing User - Update profile data
+            const { error } = await supabase.from('profiles').update({
+                display_name: user.name,
+                email: user.email,
+                phone: user.phone,
+                specialization: user.specialization,
+                role: user.role,
+                status: user.status,
+                must_change_password: user.mustChangePassword || false
+            }).eq('id', user.id);
 
-        if (error) throw error;
-
-        // Explicitly insert/upsert the profile to ensure data persistence
-        // The trigger might fail or be slow, so we do this manually since we are an Admin
-        const { error: profileError } = await supabase.from('profiles').upsert({
-            id: data.user!.id,
-            email: user.email,
-            display_name: user.name,
-            role: user.role,
-            specialization: user.specialization,
-            phone: user.phone || null,
-            status: user.status,
-            must_change_password: true // Force password change for new users
-        });
-
-        if (profileError) {
-            console.warn('Manual profile creation failed, relying on trigger/metadata:', profileError);
-            // Verify if trigger worked by fetching
-            const { data: check } = await supabase.from('profiles').select('id').eq('id', data.user!.id).single();
-            if (!check) throw new Error('فشل إنشاء الملف الشخصي (Profile check failed)');
+            if (error) throw error;
         }
-    } else {
-        // Case 2: Existing User - Update profile data
-        const { error } = await supabase.from('profiles').update({
-            display_name: user.name,
-            email: user.email, // Note: Email update in Auth requires different flow, this only updates profile display
-            phone: user.phone,
-            specialization: user.specialization,
-            role: user.role,
-            status: user.status,
-            must_change_password: user.mustChangePassword || false
-        }).eq('id', user.id);
-
-        if (error) throw error;
+    } catch (err: any) {
+        console.error('Error in saveUser:', err);
+        throw err;
     }
 };
 
-export const deleteUser = async (id: any): Promise<void> => {
+export const deleteUser = async (id: string): Promise<void> => {
     if (!supabase) return;
     const { error } = await supabase.from('profiles').delete().eq('id', id);
     if (error) throw error;

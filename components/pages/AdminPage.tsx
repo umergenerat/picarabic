@@ -9,6 +9,7 @@ import {
 import { useI18n } from '../../contexts/I18nContext';
 import * as authService from '../../services/authService';
 import * as db from '../../services/dataService';
+import * as aiService from '../../services/geminiService';
 import { supabase } from '../../services/supabaseClient';
 import Spinner from '../common/Spinner';
 import {
@@ -105,6 +106,17 @@ const UserEditForm: React.FC<{ user: PlatformUser; specializations: Specializati
                     <select value={formData.specialization} onChange={(e) => setFormData({ ...formData, specialization: e.target.value })} className="w-full rounded-md border-slate-300 dark:bg-slate-700">
                         <option value="">-- اختر التخصص --</option>
                         {specializations.map(s => <option key={s.id} value={s.name[locale]}>{s.name[locale]}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-1">الهاتف</label>
+                    <input type="text" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full rounded-md border-slate-300 dark:bg-slate-700" placeholder="06..." />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-1">الحالة</label>
+                    <select value={formData.status} onChange={(e: any) => setFormData({ ...formData, status: e.target.value })} className="w-full rounded-md border-slate-300 dark:bg-slate-700">
+                        <option value="نشط">نشط</option>
+                        <option value="غير نشط">غير نشط</option>
                     </select>
                 </div>
                 <div>
@@ -757,6 +769,104 @@ const AdminPage: React.FC<any> = (props) => {
         finally { setIsLoading(false); }
     };
 
+    const handleDeleteUser = async (id: string) => {
+        if (!confirm('هل أنت متأكد من حذف هذا المتدرب؟')) return;
+        setIsLoading(true);
+        try {
+            await authService.deleteUser(id);
+            await loadUsers();
+        } catch (e: any) {
+            console.error('Error deleting user:', e);
+            alert(`حدث خطأ أثناء حذف المتدرب: ${e.message || 'خطأ غير معروف'}`);
+        }
+        finally { setIsLoading(false); }
+    };
+
+    const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsLoading(true);
+        try {
+            const reader = new FileReader();
+
+            const processData = async (content: string, isText: boolean) => {
+                let trainees: any[] = [];
+                try {
+                    if (file.type === 'application/json' || file.name.endsWith('.json')) {
+                        trainees = JSON.parse(content);
+                    } else if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+                        const lines = content.split('\n').filter(l => l.trim());
+                        if (lines.length > 0) {
+                            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                            trainees = lines.slice(1).map(line => {
+                                const values = line.split(',').map(v => v.trim());
+                                const t: any = {};
+                                headers.forEach((h, i) => {
+                                    if (h.includes('name') || h.includes('اسم')) t.name = values[i];
+                                    if (h.includes('email') || h.includes('بريد') || h.includes('ايميل')) t.email = values[i];
+                                    if (h.includes('spec') || h.includes('تخصص')) t.specialization = values[i];
+                                    if (h.includes('phone') || h.includes('هاتف')) t.phone = values[i];
+                                });
+                                return t;
+                            });
+                        }
+                    } else {
+                        // AI Extraction
+                        const base64 = content.split(',')[1] || content;
+                        trainees = await aiService.extractTraineesFromDocument(base64, file.type);
+                    }
+
+                    if (trainees && trainees.length > 0) {
+                        const confirmed = confirm(`تم العثور على ${trainees.length} متدربين. هل تود استيرادهم الآن؟`);
+                        if (confirmed) {
+                            let count = 0;
+                            for (const t of trainees) {
+                                try {
+                                    if (t.name && t.email) {
+                                        await authService.saveUser({
+                                            id: '',
+                                            name: t.name,
+                                            email: t.email,
+                                            specialization: t.specialization || '',
+                                            phone: t.phone || '',
+                                            role: 'متدرب',
+                                            status: 'نشط',
+                                            mustChangePassword: true
+                                        });
+                                        count++;
+                                    }
+                                } catch (err) {
+                                    console.error(`Error importing ${t.email}:`, err);
+                                }
+                            }
+                            alert(`تم استيراد ${count} متدربين بنجاح.`);
+                            await loadUsers();
+                        }
+                    } else {
+                        alert('لم يتم العثور على بيانات صالحة في الملف.');
+                    }
+                } catch (err: any) {
+                    alert(`فشل في معالجة الملف: ${err.message}`);
+                } finally {
+                    setIsLoading(false);
+                    e.target.value = '';
+                }
+            };
+
+            if (file.type === 'application/json' || file.type === 'text/csv' || file.name.endsWith('.csv') || file.name.endsWith('.json')) {
+                reader.onload = (event) => processData(event.target?.result as string, true);
+                reader.readAsText(file);
+            } else {
+                reader.onload = (event) => processData(event.target?.result as string, false);
+                reader.readAsDataURL(file);
+            }
+        } catch (e: any) {
+            alert(`حدث خطأ: ${e.message}`);
+            setIsLoading(false);
+        }
+    };
+
     const handleSaveText = async (text: TextData) => {
         setIsLoading(true);
         try {
@@ -1135,9 +1245,18 @@ const AdminPage: React.FC<any> = (props) => {
                             <Card className="p-6">
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="font-bold">إدارة المتدربين الحالية</h3>
-                                    <Button size="sm" onClick={() => setEditingItem({ name: '', email: '', role: 'متدرب', status: 'نشط', mustChangePassword: true })}>
-                                        + متدرب جديد
-                                    </Button>
+                                    <div className="flex gap-2">
+                                        <label className="cursor-pointer">
+                                            <input type="file" className="hidden" onChange={handleImportFile} accept=".csv,.json,.pdf,.png,.jpg,.jpeg,.xlsx,.xls" />
+                                            <Button size="sm" variant="secondary" as="div" className="flex items-center gap-1">
+                                                <PlusCircleIcon className="h-4 w-4" />
+                                                استيراد (AI)
+                                            </Button>
+                                        </label>
+                                        <Button size="sm" onClick={() => setEditingItem({ name: '', email: '', role: 'متدرب', status: 'نشط', mustChangePassword: true })}>
+                                            + متدرب جديد
+                                        </Button>
+                                    </div>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
@@ -1149,7 +1268,10 @@ const AdminPage: React.FC<any> = (props) => {
                                                     <td className="py-3">{u.specialization}</td>
                                                     <td className="py-3"><span className={`px-2 py-0.5 rounded-full text-[10px] ${u.status === 'نشط' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{u.status}</span></td>
                                                     <td className="py-3 text-center">
-                                                        <button onClick={() => setEditingItem(u)} className="p-1 hover:text-primary-600"><PencilIcon className="h-4 w-4" /></button>
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <button onClick={() => setEditingItem(u)} className="p-1 hover:text-primary-600" title="تعديل"><PencilIcon className="h-4 w-4" /></button>
+                                                            <button onClick={() => handleDeleteUser(u.id)} className="p-1 hover:text-red-600 text-slate-400" title="حذف"><TrashIcon className="h-4 w-4" /></button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}

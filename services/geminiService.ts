@@ -206,3 +206,68 @@ export const evaluateSkillAnswer = async (skillTitle: string, scenario: string, 
         throw new Error("فشل في تقييم الإجابة.");
     }
 };
+
+const traineeExtractionSchema = {
+    type: Type.ARRAY,
+    items: {
+        type: Type.OBJECT,
+        properties: {
+            name: { type: Type.STRING, description: "الاسم الكامل للمتدرب" },
+            email: { type: Type.STRING, description: "البريد الإلكتروني" },
+            specialization: { type: Type.STRING, description: "التخصص أو الشعبة" },
+            phone: { type: Type.STRING, description: "رقم الهاتف" }
+        },
+        required: ["name", "email"],
+        propertyOrdering: ["name", "email", "specialization", "phone"]
+    }
+};
+
+export const extractTraineesFromDocument = async (fileBase64: string, mimeType: string, apiKey?: string): Promise<any[]> => {
+    try {
+        const ai = getAiClient(apiKey);
+        const prompt = `أنت خبير في استخراج البيانات. قم باستخراج قائمة المتدربين من الملف المرفق بدقة.
+        المطلوب استخراج: الاسم الكامل، البريد الإلكتروني، التخصص، ورقم الهاتف (إن وجد).
+        حول البيانات إلى تنسيق JSON حسب المخطط المطلوب. إذا كانت بعض البيانات مفقودة، اترك الحقل فارغاً ولكن استخرج ما هو موجود.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-1.5-flash",
+            contents: [
+                {
+                    parts: [
+                        { text: prompt },
+                        {
+                            inlineData: {
+                                data: fileBase64,
+                                mimeType: mimeType
+                            }
+                        }
+                    ]
+                }
+            ],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: traineeExtractionSchema
+            }
+        });
+
+        let text = response.text || '';
+
+        // Remove markdown code blocks if present
+        if (text.startsWith('```')) {
+            text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+        }
+
+        try {
+            return JSON.parse(text);
+        } catch (parseError) {
+            console.error("Failed to parse JSON from Gemini:", text);
+            // Fallback: try to find anything between [ ]
+            const match = text.match(/\[.*\]/s);
+            if (match) return JSON.parse(match[0]);
+            throw new Error("فشل في تحليل البيانات المستخرجة من الملف.");
+        }
+    } catch (error: any) {
+        console.error("Error extracting trainees:", error);
+        throw new Error(error.message || "فشل في معالجة الملف واستخراج البيانات.");
+    }
+};

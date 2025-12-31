@@ -157,7 +157,7 @@ const App: React.FC = () => {
             } else {
                 setUser(loggedInUser);
                 setIsLoginModalOpen(false);
-                if (loggedInUser.email === ADMIN_EMAIL) {
+                if (loggedInUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
                     setActivePage('admin');
                 }
                 loadData(loggedInUser.id);
@@ -176,7 +176,7 @@ const App: React.FC = () => {
         setActivePage('home');
     };
 
-    const isAdmin = user?.email === ADMIN_EMAIL;
+    const isAdmin = user?.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
     const navigateToChat = (channelId: string) => {
         setActiveChatChannelId(channelId);

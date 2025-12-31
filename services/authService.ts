@@ -5,7 +5,10 @@ import { supabase } from './supabaseClient';
 export const ADMIN_EMAIL = 'aitloutouaom@gmail.com';
 
 export const signIn = async (email: string, password: string): Promise<User> => {
+    console.log("Sign-in attempt:", email, "Supabase connected:", !!supabase);
+
     if (!supabase) {
+        console.warn("SUPABASE NOT CONNECTED - Running in demo/offline mode");
         if (email === ADMIN_EMAIL && password === 'admin') {
             return { id: 'demo-admin', displayName: 'المدير (Demo)', email: ADMIN_EMAIL, photoURL: '', mustChangePassword: false };
         }
@@ -17,14 +20,25 @@ export const signIn = async (email: string, password: string): Promise<User> => 
         password: password.trim(),
     });
 
-    if (error) throw new Error('login.error');
+    if (error) {
+        console.error("Supabase Auth sign-in failure:", error.message, error.status);
+        throw new Error(error.message || 'login.error');
+    }
 
-    // Fetch profile data
-    const { data: profile } = await supabase.from('profiles').select('*').eq('email', email).single();
+    console.log("Supabase Auth success, fetching profile for:", data.user.id);
+
+    // Fetch profile data by user ID (more robust than email)
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+
+    if (profileError) {
+        console.error("Profile fetch error during sign-in:", profileError);
+        // We don't throw here to avoid locking out users with missing profiles,
+        // but it helps diagnose why 'admin' role might be missing.
+    }
 
     return {
         id: data.user.id,
-        displayName: profile?.display_name || data.user.email?.split('@')[0],
+        displayName: profile?.name || profile?.display_name || data.user.email?.split('@')[0],
         email: data.user.email || '',
         photoURL: profile?.photo_url || `https://i.pravatar.cc/150?u=${data.user.id}`,
         mustChangePassword: profile?.must_change_password || false
@@ -77,7 +91,7 @@ export const forceChangePassword = async (email: string, newPass: string, confir
 
     return {
         id: profile?.id || authData.user.id,
-        displayName: profile?.display_name || email.split('@')[0],
+        displayName: profile?.name || profile?.display_name || email.split('@')[0],
         email: email,
         photoURL: profile?.photo_url || `https://i.pravatar.cc/150?u=${authData.user.id}`,
         mustChangePassword: false
@@ -118,6 +132,7 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
             const { error: profileError } = await supabase.from('profiles').upsert({
                 id: data.user.id,
                 email: user.email,
+                name: user.name, // Added 'name' for compatibility
                 display_name: user.name,
                 role: user.role,
                 specialization: user.specialization,
@@ -133,6 +148,7 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
         } else {
             // Case 2: Existing User - Update profile data
             const { error } = await supabase.from('profiles').update({
+                name: user.name, // Added 'name' for compatibility
                 display_name: user.name,
                 email: user.email,
                 phone: user.phone,
@@ -154,4 +170,36 @@ export const deleteUser = async (id: string): Promise<void> => {
     if (!supabase) return;
     const { error } = await supabase.from('profiles').delete().eq('id', id);
     if (error) throw error;
+};
+
+// Emergency function to initialize admin account from frontend
+export const initializeAdmin = async (password: string): Promise<void> => {
+    if (!supabase) return;
+
+    const { data, error } = await supabase.auth.signUp({
+        email: ADMIN_EMAIL,
+        password: password,
+        options: {
+            data: {
+                display_name: 'المدير',
+                role: 'مدير',
+                status: 'نشط'
+            }
+        }
+    });
+
+    if (error) throw error;
+
+    // Ensure profile is created
+    if (data.user) {
+        await supabase.from('profiles').upsert({
+            id: data.user.id,
+            email: ADMIN_EMAIL,
+            name: 'المدير',
+            display_name: 'المدير',
+            role: 'مدير',
+            status: 'نشط',
+            must_change_password: false
+        });
+    }
 };

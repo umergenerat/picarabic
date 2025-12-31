@@ -3,7 +3,7 @@ import Card from '../common/Card';
 import Button from '../common/Button';
 import { XMarkIcon, EnvelopeIcon, LockClosedIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
-import { resetPassword } from '../../services/authService';
+import { resetPassword, initializeAdmin, ADMIN_EMAIL } from '../../services/authService';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -22,6 +22,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
     const [resetEmail, setResetEmail] = useState('');
     const [resetStatus, setResetStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [resetError, setResetError] = useState('');
+    const [showAdminInit, setShowAdminInit] = useState(false);
+    const [adminInitPass, setAdminInitPass] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -45,16 +47,45 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
 
     const handleBackToLogin = () => {
         setShowForgotPassword(false);
+        setShowAdminInit(false);
         setResetStatus('idle');
         setResetError('');
         setResetEmail('');
+    };
+
+    const handleAdminInit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        try {
+            await initializeAdmin(adminInitPass);
+            alert("تمت تهيئة حساب المدير بنجاح! يمكنك الآن تسجيل الدخول.");
+            setShowAdminInit(false);
+        } catch (err: any) {
+            alert("فشل التهيئة: " + err.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-            <Card className="w-full max-w-md">
+            <Card className="w-full max-w-md overflow-hidden">
+                {/* EMERGENCY RECOVERY BANNER - OUTSIDE FORM LOGIC */}
+                {!showAdminInit && !showForgotPassword && (
+                    <div className="bg-red-600 p-2 flex justify-between items-center text-white">
+                        <span className="text-[10px] font-bold">هل تواجه مشكلة في دخول المدير؟</span>
+                        <button
+                            type="button"
+                            onClick={() => setShowAdminInit(true)}
+                            className="bg-white text-red-600 px-2 py-1 rounded text-[9px] font-bold hover:bg-slate-100"
+                        >
+                            اضغط للتهيئة (خاص بعمر)
+                        </button>
+                    </div>
+                )}
+
                 {showForgotPassword ? (
                     // Forgot Password Form
                     <form onSubmit={handleResetPassword}>
@@ -110,6 +141,29 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
                             )}
                         </div>
                     </form>
+                ) : showAdminInit ? (
+                    // Admin Initialization Form
+                    <form onSubmit={handleAdminInit}>
+                        <div className="p-6">
+                            <h3 className="text-xl font-bold mb-4">تهيئة حساب المدير</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                                سيتم إنشاء حساب جديد للبريد: <span className="font-bold">{ADMIN_EMAIL}</span>
+                                <br />يرجى تعيين كلمة مرور قوية.
+                            </p>
+                            <input
+                                type="password"
+                                value={adminInitPass}
+                                onChange={(e) => setAdminInitPass(e.target.value)}
+                                placeholder="كلمة المرور الجديدة"
+                                className="w-full rounded-md border-slate-300 dark:bg-slate-700 p-2"
+                                required
+                            />
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800 px-6 py-4 flex justify-end gap-3">
+                            <Button type="button" variant="secondary" onClick={handleBackToLogin}>{t('login.backToLogin')}</Button>
+                            <Button type="submit" isLoading={isLoading}>تهيئة الحساب الآن</Button>
+                        </div>
+                    </form>
                 ) : (
                     // Login Form
                     <form onSubmit={handleSubmit}>
@@ -130,8 +184,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
                                         type="button"
                                         onClick={() => setAccountType('trainee')}
                                         className={`w-full p-2 rounded-md text-sm font-medium transition-colors duration-200 ${accountType === 'trainee'
-                                                ? 'bg-primary-600 text-white shadow-sm ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800 ring-primary-500'
-                                                : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                            ? 'bg-primary-600 text-white shadow-sm ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800 ring-primary-500'
+                                            : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
                                             }`}
                                     >
                                         {t('login.trainee')}
@@ -140,8 +194,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
                                         type="button"
                                         onClick={() => setAccountType('admin')}
                                         className={`w-full p-2 rounded-md text-sm font-medium transition-colors duration-200 ${accountType === 'admin'
-                                                ? 'bg-primary-600 text-white shadow-sm ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800 ring-primary-500'
-                                                : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                            ? 'bg-primary-600 text-white shadow-sm ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800 ring-primary-500'
+                                            : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
                                             }`}
                                     >
                                         {t('login.admin')}
@@ -186,12 +240,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
                                         />
                                     </div>
                                 </div>
-                                {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                                {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">{error}</p>}
 
                                 <button
                                     type="button"
                                     onClick={() => setShowForgotPassword(true)}
-                                    className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                                    className="text-sm text-primary-600 dark:text-primary-400 hover:underline text-right block w-full"
                                 >
                                     {t('login.forgotPassword')}
                                 </button>

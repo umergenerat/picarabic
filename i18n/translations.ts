@@ -195,6 +195,12 @@ const translations = {
             email: 'البريد المهني',
             password: 'كلمة المرور',
             error: 'خطأ في البريد أو كلمة المرور، يرجى التأكد والمحاولة مرة أخرى.',
+            forgotPassword: 'هل نسيت كلمة المرور؟',
+            resetPassword: 'استعادة كلمة المرور',
+            resetPasswordDesc: 'أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور.',
+            backToLogin: 'العودة لتسجيل الدخول',
+            sendResetLink: 'إرسال الرابط',
+            resetEmailSent: 'تم إرسال الرابط بنجاح، يرجى تفقد بريدك الإلكتروني.',
         },
         loginRequired: {
             title: 'محتوى محمي',

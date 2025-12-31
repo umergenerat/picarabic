@@ -4,12 +4,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     children: React.ReactNode;
     variant?: 'primary' | 'secondary';
     isLoading?: boolean;
-    // FIX: Added optional 'size' prop to support different button sizes.
     size?: 'sm' | 'md';
+    as?: any;
 }
 
-const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', isLoading = false, size = 'md', className = '', ...props }) => {
-    // FIX: Removed size-specific classes (padding and font size) from baseClasses to be handled by size variants.
+const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', isLoading = false, size = 'md', className = '', as: Component = 'button', ...props }) => {
     const baseClasses = "flex items-center justify-center border border-transparent font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200";
 
     const variantClasses = {
@@ -17,15 +16,14 @@ const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', isLoadin
         secondary: "text-primary-700 bg-primary-100 hover:bg-primary-200 focus:ring-primary-500 dark:bg-slate-700 dark:text-primary-300 dark:hover:bg-slate-600",
     };
 
-    // FIX: Added size classes to control padding and font-size for different button sizes.
     const sizeClasses = {
-        sm: "p-2 text-sm", // Ideal for icon-only buttons
-        md: "px-4 py-2 text-sm", // Default button size
+        sm: "p-2 text-sm",
+        md: "px-4 py-2 text-sm",
     };
 
     return (
-        <button
-            type="button"
+        <Component
+            type={Component === 'button' ? 'button' : undefined}
             className={`${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
             disabled={isLoading || props.disabled}
             {...props}
@@ -37,7 +35,7 @@ const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', isLoadin
                 </svg>
             )}
             {children}
-        </button>
+        </Component>
     );
 };
 

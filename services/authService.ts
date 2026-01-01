@@ -78,8 +78,11 @@ export const forceChangePassword = async (email: string, newPass: string, confir
         return { id: 'demo-user', displayName: email.split('@')[0], email, photoURL: '', mustChangePassword: false };
     }
 
-    // Update the password in Auth
-    const { data: authData, error: authError } = await supabase.auth.updateUser({ password: newPass });
+    // Update the password in Auth and sync metadata
+    const { data: authData, error: authError } = await supabase.auth.updateUser({
+        password: newPass,
+        data: { must_change_password: false }
+    });
     if (authError) throw new Error(authError.message);
 
     // Update the must_change_password flag in the profile
@@ -114,6 +117,8 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
             const userPassword = user.password || '12345678';
             if (userPassword.length < 6) throw new Error("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
 
+            const mustChange = user.mustChangePassword !== undefined ? user.mustChangePassword : true;
+
             const { data, error } = await supabase.auth.signUp({
                 email: user.email,
                 password: userPassword,
@@ -123,7 +128,8 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
                         role: user.role,
                         specialization: user.specialization,
                         phone: user.phone,
-                        status: user.status
+                        status: user.status,
+                        must_change_password: mustChange
                     }
                 }
             });
@@ -141,7 +147,7 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
                 specialization: user.specialization,
                 phone: user.phone || null,
                 status: user.status || 'نشط',
-                must_change_password: user.mustChangePassword !== undefined ? user.mustChangePassword : true
+                must_change_password: mustChange
             });
 
             if (profileError) {
@@ -211,4 +217,18 @@ export const initializeAdmin = async (password: string): Promise<void> => {
             must_change_password: false
         });
     }
+};
+
+export const getUserProfile = async (userId: string): Promise<User | null> => {
+    if (!supabase) return null;
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (!profile) return null;
+
+    return {
+        id: profile.id,
+        displayName: profile.name || profile.display_name || profile.email.split('@')[0],
+        email: profile.email,
+        photoURL: profile.photo_url || `https://i.pravatar.cc/150?u=${profile.id}`,
+        mustChangePassword: profile.must_change_password || false
+    };
 };

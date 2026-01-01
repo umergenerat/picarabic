@@ -168,6 +168,7 @@ button:focus-visible {
 .text-gradient {
   background: linear-gradient(to right, #6366f1, #a855f7);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 

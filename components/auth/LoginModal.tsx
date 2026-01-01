@@ -83,19 +83,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
                 <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-primary-500 rounded-full blur-3xl opacity-20 animate-float" />
 
                 <Card className="overflow-hidden glass-effect shadow-2xl border-white/20 dark:border-white/5 rounded-3xl">
-                    {/* EMERGENCY RECOVERY BANNER */}
-                    {!showAdminInit && !showForgotPassword && (
-                        <div className="bg-gradient-to-r from-red-600/90 to-rose-600/90 py-2 px-4 flex justify-between items-center text-white backdrop-blur-sm">
-                            <span className="text-[10px] font-bold tracking-wide uppercase">هل تواجه مشكلة في دخول المدير؟</span>
-                            <button
-                                type="button"
-                                onClick={() => setShowAdminInit(true)}
-                                className="bg-white/20 backdrop-blur-md border border-white/30 text-white px-3 py-1 rounded-full text-[9px] font-bold hover:bg-white/40 transition-all"
-                            >
-                                تهيئة النظام (عمر)
-                            </button>
-                        </div>
-                    )}
 
                     <div className="relative p-8 md:p-10">
                         {/* Header Section */}
@@ -201,8 +188,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
                                         type="button"
                                         onClick={() => setAccountType('trainee')}
                                         className={`flex-1 py-3 px-4 rounded-xl text-sm font-black transition-all duration-300 ${accountType === 'trainee'
-                                                ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-white shadow-md'
-                                                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                            ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-white shadow-md'
+                                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                             }`}
                                     >
                                         {t('login.trainee')}
@@ -211,8 +198,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
                                         type="button"
                                         onClick={() => setAccountType('admin')}
                                         className={`flex-1 py-3 px-4 rounded-xl text-sm font-black transition-all duration-300 ${accountType === 'admin'
-                                                ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-white shadow-md'
-                                                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                            ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-white shadow-md'
+                                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                             }`}
                                     >
                                         {t('login.admin')}

@@ -131,11 +131,29 @@ const UserEditForm: React.FC<{ user: PlatformUser; specializations: Specializati
                         required={!formData.id}
                         disabled={!!formData.id}
                     />
-                    <p className="text-[10px] text-slate-500 mt-1">
-                        {formData.id
-                            ? "لتغيير كلمة المرور، يجب على المتدرب استخدام رابط 'نسيت كلمة المرور' عند تسجيل الدخول."
-                            : "سيتم تعيين هذه الكلمة ككلمة مرور افتراضية للحساب."}
-                    </p>
+                    <div className="flex flex-col gap-1 mt-1">
+                        <p className="text-[10px] text-slate-500">
+                            {formData.id
+                                ? "لأسباب أمنية، لا يمكن للمدير تغيير كلمة المرور مباشرة."
+                                : "سيتم تعيين هذه الكلمة ككلمة مرور افتراضية للحساب."}
+                        </p>
+                        {formData.id && (
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        await authService.resetPassword(formData.email);
+                                        alert("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريد المتدرب بنجاح.");
+                                    } catch (err: any) {
+                                        alert("فشل إرسال البريد: " + err.message);
+                                    }
+                                }}
+                                className="text-start text-[10px] font-bold text-primary-600 hover:text-primary-700 underline"
+                            >
+                                إرسال رابط إعادة تعيين كلمة المرور للمتدرب
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
             <div className="flex items-center gap-2">
@@ -708,8 +726,8 @@ const TeamEditForm: React.FC<{ team: Team; specializations: Specialization[]; us
                                 <label
                                     key={u.id}
                                     className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-all ${(formData.members || []).includes(u.name)
-                                            ? 'bg-primary-50 border-primary-500 ring-1 ring-primary-500'
-                                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
+                                        ? 'bg-primary-50 border-primary-500 ring-1 ring-primary-500'
+                                        : 'hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
                                         }`}
                                 >
                                     <input

@@ -15,7 +15,7 @@ import LoginModal from './components/auth/LoginModal';
 import ForceChangePasswordModal from './components/auth/ForceChangePasswordModal';
 import LoginRequired from './components/auth/LoginRequired';
 import { User, TextData, Skill, Team, TestContext, Page, NavItem, ProgressDataPoint, ChatChannel, Resource, Specialization } from './types';
-import { signIn, signOut, ADMIN_EMAIL } from './services/authService';
+import { signIn, signOut, getUserProfile, ADMIN_EMAIL } from './services/authService';
 import * as db from './services/dataService';
 import { HomeIcon, BookOpenIcon, SparklesIcon, PresentationChartBarIcon, BeakerIcon, ChatBubbleLeftRightIcon, LinkIcon, ChartPieIcon, Cog6ToothIcon } from './components/common/Icons';
 import { useI18n } from './contexts/I18nContext';
@@ -66,16 +66,16 @@ const App: React.FC = () => {
 
         let mounted = true;
 
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
             if (mounted) {
                 if (session) {
-                    const u = session.user;
-                    const loggedInUser: User = {
-                        id: u.id,
-                        displayName: u.user_metadata?.display_name || u.email?.split('@')[0] || 'User',
-                        email: u.email || '',
-                        photoURL: u.user_metadata?.photo_url || `https://i.pravatar.cc/150?u=${u.id}`,
-                        mustChangePassword: u.user_metadata?.must_change_password
+                    const profile = await getUserProfile(session.user.id);
+                    const loggedInUser: User = profile || {
+                        id: session.user.id,
+                        displayName: session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'User',
+                        email: session.user.email || '',
+                        photoURL: session.user.user_metadata?.photo_url || `https://i.pravatar.cc/150?u=${session.user.id}`,
+                        mustChangePassword: session.user.user_metadata?.must_change_password
                     };
                     setUser(loggedInUser);
                     loadData(loggedInUser.id);
@@ -85,16 +85,16 @@ const App: React.FC = () => {
             }
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (mounted) {
                 if (session) {
-                    const u = session.user;
-                    const loggedInUser: User = {
-                        id: u.id,
-                        displayName: u.user_metadata?.display_name,
-                        email: u.email || '',
-                        photoURL: u.user_metadata?.photo_url,
-                        mustChangePassword: u.user_metadata?.must_change_password
+                    const profile = await getUserProfile(session.user.id);
+                    const loggedInUser: User = profile || {
+                        id: session.user.id,
+                        displayName: session.user.user_metadata?.display_name,
+                        email: session.user.email || '',
+                        photoURL: session.user.user_metadata?.photo_url,
+                        mustChangePassword: session.user.user_metadata?.must_change_password
                     };
                     setUser(loggedInUser);
                     loadData(loggedInUser.id);

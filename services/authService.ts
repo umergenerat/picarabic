@@ -111,9 +111,12 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
     try {
         if (!user.id) {
             // Case 1: New User - Must create in Auth first
+            const userPassword = user.password || '12345678';
+            if (userPassword.length < 6) throw new Error("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+
             const { data, error } = await supabase.auth.signUp({
                 email: user.email,
-                password: user.password || '12345678', // Default password if not provided
+                password: userPassword,
                 options: {
                     data: {
                         display_name: user.name,
@@ -147,6 +150,12 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
             }
         } else {
             // Case 2: Existing User - Update profile data
+            // Note: We don't update password here because client-side supabase.auth.updateUser 
+            // only works for the currently logged-in user.
+            if (user.password) {
+                console.warn("Attempted to update password for existing user. This is not supported through saveUser for security reasons.");
+            }
+
             const { error } = await supabase.from('profiles').update({
                 name: user.name, // Added 'name' for compatibility
                 display_name: user.name,

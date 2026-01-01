@@ -70,122 +70,139 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-            <Card className="w-full max-w-md overflow-hidden">
-                {/* EMERGENCY RECOVERY BANNER - OUTSIDE FORM LOGIC */}
-                {!showAdminInit && !showForgotPassword && (
-                    <div className="bg-red-600 p-2 flex justify-between items-center text-white">
-                        <span className="text-[10px] font-bold">هل تواجه مشكلة في دخول المدير؟</span>
-                        <button
-                            type="button"
-                            onClick={() => setShowAdminInit(true)}
-                            className="bg-white text-red-600 px-2 py-1 rounded text-[9px] font-bold hover:bg-slate-100"
-                        >
-                            اضغط للتهيئة (خاص بعمر)
-                        </button>
-                    </div>
-                )}
+        <div className="fixed inset-0 z-50 flex justify-center items-center p-4 overflow-y-auto">
+            {/* Dynamic Background Overlay */}
+            <div
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity"
+                onClick={onClose}
+            />
 
-                {showForgotPassword ? (
-                    // Forgot Password Form
-                    <form onSubmit={handleResetPassword}>
-                        <div className="p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">{t('login.resetPassword')}</h3>
-                                <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
+            <div className="relative w-full max-w-lg mb-12 animate-in fade-in zoom-in-95 duration-500">
+                {/* Decorative Elements */}
+                <div className="absolute -top-12 -left-12 w-48 h-48 premium-gradient rounded-full blur-3xl opacity-20 animate-pulse-soft" />
+                <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-primary-500 rounded-full blur-3xl opacity-20 animate-float" />
+
+                <Card className="overflow-hidden glass-effect shadow-2xl border-white/20 dark:border-white/5 rounded-3xl">
+                    {/* EMERGENCY RECOVERY BANNER */}
+                    {!showAdminInit && !showForgotPassword && (
+                        <div className="bg-gradient-to-r from-red-600/90 to-rose-600/90 py-2 px-4 flex justify-between items-center text-white backdrop-blur-sm">
+                            <span className="text-[10px] font-bold tracking-wide uppercase">هل تواجه مشكلة في دخول المدير؟</span>
+                            <button
+                                type="button"
+                                onClick={() => setShowAdminInit(true)}
+                                className="bg-white/20 backdrop-blur-md border border-white/30 text-white px-3 py-1 rounded-full text-[9px] font-bold hover:bg-white/40 transition-all"
+                            >
+                                تهيئة النظام (عمر)
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="relative p-8 md:p-10">
+                        {/* Header Section */}
+                        <div className="flex justify-between items-start mb-8">
+                            <div>
+                                <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+                                    {showForgotPassword ? t('login.resetPassword') : showAdminInit ? 'تهيئة النظام' : t('login.title')}
+                                </h3>
+                                <div className="h-1.5 w-12 premium-gradient rounded-full" />
                             </div>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-primary-600 hover:bg-primary-50 transition-all"
+                            >
+                                <XMarkIcon className="h-6 w-6" />
+                            </button>
+                        </div>
 
-                            {resetStatus === 'success' ? (
-                                <div className="text-center py-4">
-                                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
+                        {showForgotPassword ? (
+                            <form onSubmit={handleResetPassword} className="space-y-6">
+                                {resetStatus === 'success' ? (
+                                    <div className="text-center py-8 animate-in zoom-in-95">
+                                        <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-3xl flex items-center justify-center mx-auto mb-6 rotate-3">
+                                            <svg className="w-10 h-10 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                        <p className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('resetPassword.success')}</p>
+                                        <p className="text-slate-600 dark:text-slate-400">{t('login.resetEmailSent')}</p>
                                     </div>
-                                    <p className="text-green-600 dark:text-green-400 font-medium mb-2">{t('resetPassword.success')}</p>
-                                    <p className="text-slate-600 dark:text-slate-400 text-sm">{t('login.resetEmailSent')}</p>
-                                </div>
-                            ) : (
-                                <>
-                                    <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">{t('login.resetPasswordDesc')}</p>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label htmlFor="reset-email" className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('login.email')}</label>
-                                            <div className="mt-1 relative rounded-md shadow-sm">
-                                                <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3">
+                                ) : (
+                                    <>
+                                        <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{t('login.resetPasswordDesc')}</p>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">{t('login.email')}</label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 end-0 flex items-center pe-4 pointer-events-none">
                                                     <EnvelopeIcon className="h-5 w-5 text-slate-400" />
                                                 </div>
                                                 <input
                                                     type="email"
-                                                    name="reset-email"
-                                                    id="reset-email"
                                                     value={resetEmail}
                                                     onChange={(e) => setResetEmail(e.target.value)}
                                                     required
-                                                    className="block w-full rounded-md border-slate-300 ps-3 pe-10 focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600"
-                                                    placeholder="you@example.com"
+                                                    className="input-premium"
+                                                    placeholder="name@example.com"
                                                 />
                                             </div>
+                                            {resetError && <p className="text-xs text-red-500 font-bold px-1">{resetError}</p>}
                                         </div>
-                                        {resetError && <p className="text-sm text-red-600 dark:text-red-400">{resetError}</p>}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                        <div className="bg-slate-50 dark:bg-slate-800 px-6 py-4 flex justify-end gap-3">
-                            <Button type="button" variant="secondary" onClick={handleBackToLogin}>{t('login.backToLogin')}</Button>
-                            {resetStatus !== 'success' && (
-                                <Button type="submit" isLoading={resetStatus === 'loading'}>{t('login.sendResetLink')}</Button>
-                            )}
-                        </div>
-                    </form>
-                ) : showAdminInit ? (
-                    // Admin Initialization Form
-                    <form onSubmit={handleAdminInit}>
-                        <div className="p-6">
-                            <h3 className="text-xl font-bold mb-4">تهيئة حساب المدير</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                                سيتم إنشاء حساب جديد للبريد: <span className="font-bold">{ADMIN_EMAIL}</span>
-                                <br />يرجى تعيين كلمة مرور قوية.
-                            </p>
-                            <input
-                                type="password"
-                                value={adminInitPass}
-                                onChange={(e) => setAdminInitPass(e.target.value)}
-                                placeholder="كلمة المرور الجديدة"
-                                className="w-full rounded-md border-slate-300 dark:bg-slate-700 p-2"
-                                required
-                            />
-                        </div>
-                        <div className="bg-slate-50 dark:bg-slate-800 px-6 py-4 flex justify-end gap-3">
-                            <Button type="button" variant="secondary" onClick={handleBackToLogin}>{t('login.backToLogin')}</Button>
-                            <Button type="submit" isLoading={isLoading}>تهيئة الحساب الآن</Button>
-                        </div>
-                    </form>
-                ) : (
-                    // Login Form
-                    <form onSubmit={handleSubmit}>
-                        <div className="p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">{t('login.title')}</h3>
-                                <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
-                            </div>
-
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    {t('login.accountType')}
-                                </label>
-                                <div className="grid grid-cols-2 gap-2">
+                                    </>
+                                )}
+                                <div className="pt-4 flex flex-col gap-3">
+                                    {resetStatus !== 'success' && (
+                                        <Button type="submit" isLoading={resetStatus === 'loading'} className="w-full py-4 rounded-2xl shadow-lg premium-gradient border-none transform active:scale-95 transition-all">
+                                            {t('login.sendResetLink')}
+                                        </Button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={handleBackToLogin}
+                                        className="text-sm font-bold text-slate-500 hover:text-primary-600 py-2 transition-colors"
+                                    >
+                                        {t('login.backToLogin')}
+                                    </button>
+                                </div>
+                            </form>
+                        ) : showAdminInit ? (
+                            <form onSubmit={handleAdminInit} className="space-y-6">
+                                <p className="text-slate-600 dark:text-slate-400 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl text-sm leading-relaxed border border-blue-100 dark:border-blue-800">
+                                    سيتم إعداد حساب المسؤول للبريد: <span className="font-extrabold text-blue-600 dark:text-blue-400">{ADMIN_EMAIL}</span>
+                                </p>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">كلمة المرور الجديدة</label>
+                                    <input
+                                        type="password"
+                                        value={adminInitPass}
+                                        onChange={(e) => setAdminInitPass(e.target.value)}
+                                        className="input-premium"
+                                        placeholder="••••••••"
+                                        required
+                                    />
+                                </div>
+                                <div className="pt-4 flex flex-col gap-3">
+                                    <Button type="submit" isLoading={isLoading} className="w-full py-4 rounded-2xl shadow-lg premium-gradient border-none transform active:scale-95 transition-all">
+                                        تهيئة الحساب الآن
+                                    </Button>
+                                    <button
+                                        type="button"
+                                        onClick={handleBackToLogin}
+                                        className="text-sm font-bold text-slate-500 hover:text-primary-600 py-2 transition-colors"
+                                    >
+                                        {t('login.backToLogin')}
+                                    </button>
+                                </div>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                {/* Account Type Switcher */}
+                                <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl flex border border-slate-200 dark:border-slate-700">
                                     <button
                                         type="button"
                                         onClick={() => setAccountType('trainee')}
-                                        className={`w-full p-2 rounded-md text-sm font-medium transition-colors duration-200 ${accountType === 'trainee'
-                                            ? 'bg-primary-600 text-white shadow-sm ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800 ring-primary-500'
-                                            : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                        className={`flex-1 py-3 px-4 rounded-xl text-sm font-black transition-all duration-300 ${accountType === 'trainee'
+                                                ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-white shadow-md'
+                                                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                             }`}
                                     >
                                         {t('login.trainee')}
@@ -193,71 +210,90 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
                                     <button
                                         type="button"
                                         onClick={() => setAccountType('admin')}
-                                        className={`w-full p-2 rounded-md text-sm font-medium transition-colors duration-200 ${accountType === 'admin'
-                                            ? 'bg-primary-600 text-white shadow-sm ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800 ring-primary-500'
-                                            : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                        className={`flex-1 py-3 px-4 rounded-xl text-sm font-black transition-all duration-300 ${accountType === 'admin'
+                                                ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-white shadow-md'
+                                                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                             }`}
                                     >
                                         {t('login.admin')}
                                     </button>
                                 </div>
-                            </div>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('login.email')}</label>
-                                    <div className="mt-1 relative rounded-md shadow-sm">
-                                        <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3">
-                                            <EnvelopeIcon className="h-5 w-5 text-slate-400" />
+                                {/* Inputs */}
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">{t('login.email')}</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 end-0 flex items-center pe-4 pointer-events-none transition-colors group-focus-within:text-primary-500">
+                                                <EnvelopeIcon className="h-5 w-5 text-slate-400 group-focus-within:text-primary-500" />
+                                            </div>
+                                            <input
+                                                type="email"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                required
+                                                className="input-premium"
+                                                placeholder="you@example.com"
+                                            />
                                         </div>
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            id="email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            required
-                                            className="block w-full rounded-md border-slate-300 ps-3 pe-10 focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600"
-                                            placeholder="you@example.com"
-                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">{t('login.password')}</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 end-0 flex items-center pe-4 pointer-events-none transition-colors group-focus-within:text-primary-500">
+                                                <LockClosedIcon className="h-5 w-5 text-slate-400 group-focus-within:text-primary-500" />
+                                            </div>
+                                            <input
+                                                type="password"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                required
+                                                className="input-premium"
+                                                placeholder="••••••••"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <div>
-                                    <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('login.password')}</label>
-                                    <div className="mt-1 relative rounded-md shadow-sm">
-                                        <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3">
-                                            <LockClosedIcon className="h-5 w-5 text-slate-400" />
-                                        </div>
-                                        <input
-                                            type="password"
-                                            name="password"
-                                            id="password"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            required
-                                            className="block w-full rounded-md border-slate-300 ps-3 pe-10 focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600"
-                                            placeholder="••••••••"
-                                        />
+
+                                {error && (
+                                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-xl animate-in fade-in slide-in-from-right-4">
+                                        <p className="text-xs font-bold text-red-600 dark:text-red-400 leading-relaxed">{error}</p>
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col gap-4 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowForgotPassword(true)}
+                                        className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 tracking-tight"
+                                    >
+                                        {t('login.forgotPassword')}
+                                    </button>
+
+                                    <div className="flex gap-3">
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            onClick={onClose}
+                                            className="flex-1 py-4 rounded-2xl border-slate-200 dark:border-slate-700 font-bold"
+                                        >
+                                            {t('global.cancel')}
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            isLoading={isLoading}
+                                            className="flex-[2] py-4 rounded-2xl shadow-xl premium-gradient border-none font-black text-lg transform active:scale-95 transition-all"
+                                        >
+                                            {t('global.login')}
+                                        </Button>
                                     </div>
                                 </div>
-                                {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">{error}</p>}
-
-                                <button
-                                    type="button"
-                                    onClick={() => setShowForgotPassword(true)}
-                                    className="text-sm text-primary-600 dark:text-primary-400 hover:underline text-right block w-full"
-                                >
-                                    {t('login.forgotPassword')}
-                                </button>
-                            </div>
-                        </div>
-                        <div className="bg-slate-50 dark:bg-slate-800 px-6 py-4 flex justify-end gap-3">
-                            <Button type="button" variant="secondary" onClick={onClose}>{t('global.cancel')}</Button>
-                            <Button type="submit" isLoading={isLoading}>{t('global.login')}</Button>
-                        </div>
-                    </form>
-                )}
-            </Card>
+                            </form>
+                        )}
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 };

@@ -7,6 +7,7 @@ import {
     PlusCircleIcon, LockClosedIcon, CheckIcon, CheckCircleIcon, ExclamationTriangleIcon, AcademicCapIcon
 } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
+import { useAi } from '../../contexts/AiContext';
 import * as authService from '../../services/authService';
 import * as db from '../../services/dataService';
 import * as aiService from '../../services/geminiService';
@@ -120,16 +121,21 @@ const UserEditForm: React.FC<{ user: PlatformUser; specializations: Specializati
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium mb-1">كلمة المرور</label>
+                    <label className={`block text-sm font-medium mb-1 ${formData.id ? 'text-slate-400' : ''}`}>كلمة المرور</label>
                     <input
                         type="password"
                         value={formData.password || ''}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full rounded-md border-slate-300 dark:bg-slate-700"
-                        placeholder="••••••••"
+                        className={`w-full rounded-md border-slate-300 dark:bg-slate-700 ${formData.id ? 'bg-slate-100 cursor-not-allowed opacity-60' : ''}`}
+                        placeholder={formData.id ? "••••••••" : "أدخل كلمة مرور"}
                         required={!formData.id}
+                        disabled={!!formData.id}
                     />
-                    <p className="text-[10px] text-slate-500 mt-1">سيتم تعيين هذه الكلمة ككلمة مرور افتراضية للحساب.</p>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                        {formData.id
+                            ? "لتغيير كلمة المرور، يجب على المتدرب استخدام رابط 'نسيت كلمة المرور' عند تسجيل الدخول."
+                            : "سيتم تعيين هذه الكلمة ككلمة مرور افتراضية للحساب."}
+                    </p>
                 </div>
             </div>
             <div className="flex items-center gap-2">
@@ -615,10 +621,15 @@ const TeamEditForm: React.FC<{ team: Team; specializations: Specialization[]; us
         setFormData({ ...formData, members: newMembers });
     };
 
+    const filteredTrainees = useMemo(() => {
+        if (!formData.specialization.ar) return [];
+        return users.filter(u => u.specialization === formData.specialization.ar);
+    }, [users, formData.specialization.ar]);
+
     return (
         <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-6">
             <div className="flex justify-between items-center border-b pb-4">
-                <h3 className="text-xl font-bold">{formData.id ? 'تعديل الفريق' : 'إضافة فريق جديد'}</h3>
+                <h3 className="text-xl font-bold">{formData.id ? 'تعديل الفريق' : 'إنضافة فريق جديد'}</h3>
                 <div className="flex gap-2">
                     <Button variant="secondary" onClick={onCancel} size="sm">إلغاء</Button>
                     <Button type="submit" size="sm">حفظ الفريق</Button>
@@ -633,17 +644,17 @@ const TeamEditForm: React.FC<{ team: Team; specializations: Specialization[]; us
                     onChange={(e, lang) => setFormData({ ...formData, name: { ...formData.name, [lang]: e.target.value } })}
                 />
 
-                <div>
-                    <label className="block text-sm font-medium mb-1">التخصص</label>
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-600">
+                    <label className="block text-sm font-bold mb-2 text-primary-600">اختيار التخصص التعليمي</label>
                     <select
                         value={formData.specialization.ar}
                         onChange={(e) => {
                             const spec = specializations.find(s => s.name.ar === e.target.value);
-                            if (spec) setFormData({ ...formData, specialization: spec.name });
+                            if (spec) setFormData({ ...formData, specialization: spec.name, members: [], teamLeader: '' });
                         }}
-                        className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
+                        className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm shadow-sm focus:ring-primary-500"
                     >
-                        <option value="">-- اختر التخصص --</option>
+                        <option value="">-- اختر التخصص لتحميل المتدربين --</option>
                         {specializations.map(s => <option key={s.id} value={s.name.ar}>{s.name.ar}</option>)}
                     </select>
                 </div>
@@ -663,9 +674,10 @@ const TeamEditForm: React.FC<{ team: Team; specializations: Specialization[]; us
                         <select
                             value={formData.teamLeader}
                             onChange={(e) => setFormData({ ...formData, teamLeader: e.target.value })}
-                            className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm"
+                            className="w-full rounded-md border-slate-300 dark:bg-slate-700 text-sm disabled:opacity-50"
+                            disabled={!formData.members || formData.members.length === 0}
                         >
-                            <option value="">-- اختر القائد --</option>
+                            <option value="">-- اختر القائد من الأعضاء --</option>
                             {(formData.members || []).map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
                     </div>
@@ -679,22 +691,43 @@ const TeamEditForm: React.FC<{ team: Team; specializations: Specialization[]; us
                 />
 
                 <div>
-                    <label className="block text-sm font-medium mb-2">أعضاء الفريق (اختر من المتدربين)</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 border rounded-md dark:border-slate-700">
-                        {users.map(u => (
-                            <label key={u.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 p-1 rounded">
-                                <input
-                                    type="checkbox"
-                                    checked={(formData.members || []).includes(u.name)}
-                                    onChange={() => handleMemberToggle(u.name)}
-                                    className="rounded text-primary-600 focus:ring-primary-500"
-                                />
-                                <span className={u.specialization === formData.specialization.ar ? 'font-bold text-primary-600' : ''}>
-                                    {u.name}
-                                </span>
-                            </label>
-                        ))}
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-bold">أعضاء الفريق المتخصصين</label>
+                        <span className="text-[10px] bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
+                            {filteredTrainees.length} متدرب متاح
+                        </span>
                     </div>
+
+                    {filteredTrainees.length === 0 ? (
+                        <div className="text-center py-8 border rounded-md bg-slate-50 dark:bg-slate-800 text-slate-500 text-xs italic">
+                            {formData.specialization.ar ? 'لا يوجد متدربون مسجلون في هذا التخصص حالياً' : 'يرجى اختيار تخصص لعرض المتدربين'}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-3 border rounded-md dark:border-slate-700 bg-white dark:bg-slate-900 shadow-inner">
+                            {filteredTrainees.map(u => (
+                                <label
+                                    key={u.id}
+                                    className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-all ${(formData.members || []).includes(u.name)
+                                            ? 'bg-primary-50 border-primary-500 ring-1 ring-primary-500'
+                                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
+                                        }`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={(formData.members || []).includes(u.name)}
+                                        onChange={() => handleMemberToggle(u.name)}
+                                        className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <div className="flex flex-col">
+                                        <span className={`text-xs font-bold ${(formData.members || []).includes(u.name) ? 'text-primary-700' : ''}`}>
+                                            {u.name}
+                                        </span>
+                                        {u.phone && <span className="text-[9px] text-slate-400">{u.phone}</span>}
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </form>
@@ -703,6 +736,7 @@ const TeamEditForm: React.FC<{ team: Team; specializations: Specialization[]; us
 
 const AdminPage: React.FC<any> = (props) => {
     const { t, locale } = useI18n();
+    const { getApiKey } = useAi();
     const [activeTab, setActiveTab] = useState<AdminTab>('content');
     const [activeContentType, setActiveContentType] = useState<'texts' | 'skills' | 'specializations' | 'chat-channels' | 'teams'>('texts');
     const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -814,7 +848,8 @@ const AdminPage: React.FC<any> = (props) => {
                     } else {
                         // AI Extraction
                         const base64 = content.split(',')[1] || content;
-                        trainees = await aiService.extractTraineesFromDocument(base64, file.type);
+                        const key = await getApiKey();
+                        trainees = await aiService.extractTraineesFromDocument(base64, file.type, key);
                     }
 
                     if (trainees && trainees.length > 0) {

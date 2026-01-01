@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AcademicCapIcon } from '../common/Icons';
+import { AcademicCapIcon, PowerIcon } from '../common/Icons';
 import { Page, NavItem } from '../../types';
 import { useI18n } from '../../contexts/I18nContext';
 
@@ -12,6 +12,7 @@ interface SidebarProps {
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;
     navItems: Omit<NavItem, 'label'>[];
+    onExit: () => void;
 }
 
 const NavLink: React.FC<{
@@ -40,7 +41,7 @@ const NavLink: React.FC<{
     );
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, isAdmin, logoSrc, isOpen, setIsOpen, navItems }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, isAdmin, logoSrc, isOpen, setIsOpen, navItems, onExit }) => {
     const { t, locale } = useI18n();
     const visibleNavItems = navItems.filter(item => !item.adminOnly || isAdmin);
 
@@ -51,20 +52,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, isAdmin, l
         setIsOpen(false);
     };
 
-    const sidebarDirectionClasses = locale === 'ar' 
+    const sidebarDirectionClasses = locale === 'ar'
         ? `right-0 border-l ${isOpen ? 'translate-x-0' : 'translate-x-full'}`
         : `left-0 border-r ${isOpen ? 'translate-x-0' : '-translate-x-full'}`;
 
     return (
         <>
             {/* Overlay for mobile */}
-            <div 
-                className={`fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+            <div
+                className={`fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={() => setIsOpen(false)}
                 aria-hidden="true"
             ></div>
 
-            <aside 
+            <aside
                 className={`fixed md:relative inset-y-0 z-40 w-64 flex-shrink-0 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 p-4 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${sidebarDirectionClasses}`}
                 aria-label="Sidebar"
             >
@@ -89,7 +90,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, isAdmin, l
                         />
                     ))}
                 </nav>
-                <div className="mt-auto text-center text-xs text-slate-500">
+                <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-700">
+                    <button
+                        onClick={onExit}
+                        className="flex items-center w-full px-4 py-3 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors group"
+                    >
+                        <PowerIcon className="h-5 w-5 mx-2 group-hover:scale-110 transition-transform" />
+                        <span>{t('global.exit')}</span>
+                    </button>
+                </div>
+                <div className="mt-4 text-center text-xs text-slate-500">
                     <p>{t('global.copyright')}</p>
                 </div>
             </aside>

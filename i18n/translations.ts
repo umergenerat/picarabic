@@ -15,6 +15,9 @@ const translations = {
             add: 'إضافة جديد',
             confirm: 'تأكيد',
             close: 'إغلاق',
+            exit: 'خروج',
+            exitApp: 'خروج من التطبيق',
+            exitConfirm: 'هل تريد الخروج من التطبيق؟ سيتم حفظ جميع التغييرات وتأمين حسابك.',
             storageFullError: 'مساحة التخزين المحلية ممتلئة، لا يمكن حفظ السجل.',
         },
         nav: {
@@ -231,6 +234,9 @@ const translations = {
             loading: 'Chargement...',
             save: 'Enregistrer',
             cancel: 'Annuler',
+            exit: 'Quitter',
+            exitApp: "Quitter l'application",
+            exitConfirm: "Voulez-vous vraiment quitter l'application ? Toutes les modifications seront enregistrées.",
         },
         nav: {
             home: 'Accueil',

@@ -176,6 +176,36 @@ const App: React.FC = () => {
         setActivePage('home');
     };
 
+    const handleExit = async () => {
+        if (window.confirm(t('global.exitConfirm'))) {
+            setIsLoading(true);
+            try {
+                await signOut();
+                setUser(null);
+                setCompletedSkills([]);
+                setActivePage('home');
+                // Redirect to a clean state or show a temporary farewell if needed
+                window.location.reload(); // Optional: force a full reload to clear all memory states
+            } catch (error) {
+                console.error("Exit failed:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    };
+
+    // Prompt user before closing tab if logged in
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (user) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [user]);
+
     const isAdmin = user?.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
     const navigateToChat = (channelId: string) => {
@@ -214,7 +244,16 @@ const App: React.FC = () => {
 
     return (
         <div className="flex h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans overflow-hidden">
-            <Sidebar activePage={activePage} setActivePage={setActivePage} isAdmin={isAdmin} logoSrc={logoSrc} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} navItems={navItems} />
+            <Sidebar
+                activePage={activePage}
+                setActivePage={setActivePage}
+                isAdmin={isAdmin}
+                logoSrc={logoSrc}
+                isOpen={isSidebarOpen}
+                setIsOpen={setIsSidebarOpen}
+                navItems={navItems}
+                onExit={handleExit}
+            />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header user={user} onLogin={handleOpenLoginModal} onLogout={handleLogout} logoSrc={logoSrc} onToggleSidebar={() => setIsSidebarOpen(true)} />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-100 dark:bg-slate-900 p-4 sm:p-6 lg:p-8">

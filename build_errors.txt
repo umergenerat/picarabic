@@ -1,0 +1,32 @@
+
+> picarabic@0.0.0 build
+> vite build
+
+[36mvite v6.4.1 [32mbuilding for production...[36m[39m
+transforming...
+Error: Cannot apply unknown utility class `focus:ring-primary-500`
+    at onInvalidCandidate (C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\tailwindcss\dist\lib.js:21:1511)
+    at Te (C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\tailwindcss\dist\lib.js:16:36652)
+    at C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\tailwindcss\dist\lib.js:21:355
+    at Rr (C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\tailwindcss\dist\lib.js:3:1718)
+    at _ (C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\tailwindcss\dist\lib.js:3:1377)
+    at $e (C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\tailwindcss\dist\lib.js:21:172)
+    at un (C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\tailwindcss\dist\lib.js:38:294)
+    at async cn (C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\tailwindcss\dist\lib.js:38:631)
+    at async Xr (C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\@tailwindcss\node\dist\index.js:10:3417)
+    at async I (C:\Users\aitlo\OneDrive\Bureau\Nouveau dossier (2)\picarabic\node_modules\@tailwindcss\postcss\dist\index.js:10:3977)
+[32m✓[39m 40 modules transformed.
+✗ Build failed in 769ms
+error during build:
+[vite-plugin-pwa:build] [plugin vite-plugin-pwa:build] index.css (1:0): There was an error during the build:
+  [postcss] tailwindcss: C:/Users/aitlo/OneDrive/Bureau/Nouveau dossier (2)/picarabic/index.css:1:1: Cannot apply unknown utility class `focus:ring-primary-500`
+Additionally, handling the error in the 'buildEnd' hook caused the following error:
+  [postcss] tailwindcss: C:/Users/aitlo/OneDrive/Bureau/Nouveau dossier (2)/picarabic/index.css:1:1: Cannot apply unknown utility class `focus:ring-primary-500`
+file: C:/Users/aitlo/OneDrive/Bureau/Nouveau dossier (2)/picarabic/index.css:1:0
+    at getRollupError (file:///C:/Users/aitlo/OneDrive/Bureau/Nouveau%20dossier%20(2)/picarabic/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at file:///C:/Users/aitlo/OneDrive/Bureau/Nouveau%20dossier%20(2)/picarabic/node_modules/rollup/dist/es/shared/node-entry.js:23347:39
+    at async catchUnfinishedHookActions (file:///C:/Users/aitlo/OneDrive/Bureau/Nouveau%20dossier%20(2)/picarabic/node_modules/rollup/dist/es/shared/node-entry.js:22805:16)
+    at async rollupInternal (file:///C:/Users/aitlo/OneDrive/Bureau/Nouveau%20dossier%20(2)/picarabic/node_modules/rollup/dist/es/shared/node-entry.js:23330:5)
+    at async buildEnvironment (file:///C:/Users/aitlo/OneDrive/Bureau/Nouveau%20dossier%20(2)/picarabic/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:46235:14)
+    at async Object.defaultBuildApp [as buildApp] (file:///C:/Users/aitlo/OneDrive/Bureau/Nouveau%20dossier%20(2)/picarabic/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:46713:5)
+    at async CAC.<anonymous> (file:///C:/Users/aitlo/OneDrive/Bureau/Nouveau%20dossier%20(2)/picarabic/node_modules/vite/dist/node/cli.js:863:7)

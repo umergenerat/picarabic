@@ -38,7 +38,7 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                 const model = expert?.model || 'gemini-1.5-flash';
 
                 console.log('Generating skill scenario for:', skill.title[locale], 'with specialization:', specialization);
-                const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, apiKey, model);
+                const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, apiKey);
                 setScenario(result.scenario);
                 setQuestion(result.question);
             } catch (err: any) {
@@ -62,7 +62,7 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
             const expert = channels.find(c => c.id === 'soft-skills-expert');
             const model = expert?.model || 'gemini-1.5-flash';
 
-            const result = await evaluateSkillAnswer(skill.title[locale], `${scenario}\n${question}`, userAnswer, apiKey, model);
+            const result = await evaluateSkillAnswer(skill.title[locale], `${scenario}\n${question}`, userAnswer, apiKey);
             setFeedback(result);
         } catch (err) {
             setError(t('texts.errorEval'));

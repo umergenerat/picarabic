@@ -38,7 +38,7 @@ const TestsSection: React.FC<TestsSectionProps> = ({ testContexts }) => {
             const testExpert = channels.find(c => c.id === 'test-expert');
             const model = testExpert?.model || 'gemini-1.5-flash';
 
-            const generatedQuestions = await generateQuiz(sampleContext, apiKey, model);
+            const generatedQuestions = await generateQuiz(sampleContext, apiKey);
             setQuestions(generatedQuestions);
         } catch (err: any) {
             setError(err.message || t('texts.errorQuiz'));

@@ -214,6 +214,7 @@ const App: React.FC = () => {
     };
 
     const renderPage = () => {
+        if (activePage === 'home') return <HomePage />;
         if (isLoading) return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
 
         switch (activePage) {

@@ -25,24 +25,39 @@ export const signIn = async (email: string, password: string): Promise<User> => 
         throw new Error(error.message || 'login.error');
     }
 
-    console.log("Supabase Auth success, fetching profile for:", data.user.id);
+    console.log("Supabase Auth success, extracting metadata for:", data.user.id);
 
-    // Fetch profile data by user ID (more robust than email)
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+    // Optimization: Use user_metadata immediately if available to avoid blocking for the profile fetch
+    const metadata = data.user.user_metadata;
+    const initialUser: User = {
+        id: data.user.id,
+        displayName: metadata?.display_name || metadata?.name || data.user.email?.split('@')[0],
+        email: data.user.email || '',
+        photoURL: metadata?.photo_url || `https://i.pravatar.cc/150?u=${data.user.id}`,
+        mustChangePassword: metadata?.must_change_password || false
+    };
 
-    if (profileError) {
-        console.error("Profile fetch error during sign-in:", profileError);
-        // We don't throw here to avoid locking out users with missing profiles,
-        // but it helps diagnose why 'admin' role might be missing.
+    // We still fetch the profile in the background to ensure data consistency,
+    // but we can return the initialUser immediately if it looks complete enough.
+    // However, since mustChangePassword is critical, we'll do a quick check.
+
+    // For now, let's keep it sequential but optimized by selecting only needed fields
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, display_name, photo_url, must_change_password')
+        .eq('id', data.user.id)
+        .single();
+
+    if (profile) {
+        return {
+            ...initialUser,
+            displayName: profile.name || profile.display_name || initialUser.displayName,
+            photoURL: profile.photo_url || initialUser.photoURL,
+            mustChangePassword: profile.must_change_password ?? initialUser.mustChangePassword
+        };
     }
 
-    return {
-        id: data.user.id,
-        displayName: profile?.name || profile?.display_name || data.user.email?.split('@')[0],
-        email: data.user.email || '',
-        photoURL: profile?.photo_url || `https://i.pravatar.cc/150?u=${data.user.id}`,
-        mustChangePassword: profile?.must_change_password || false
-    };
+    return initialUser;
 };
 
 export const signOut = async (): Promise<void> => {

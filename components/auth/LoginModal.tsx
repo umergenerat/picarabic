@@ -28,8 +28,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        await onLoginAttempt(email, password);
-        setIsLoading(false);
+        try {
+            await onLoginAttempt(email, password);
+        } finally {
+            // Note: If login is successful, the modal will be closed by the parent component
+            // We only set isLoading to false if an error occurred or if it's still open
+            setIsLoading(false);
+        }
     };
 
     const handleResetPassword = async (e: React.FormEvent) => {

@@ -78,9 +78,9 @@ const App: React.FC = () => {
                         mustChangePassword: session.user.user_metadata?.must_change_password
                     };
                     setUser(loggedInUser);
-                    loadData(loggedInUser.id);
+                    // loadData(loggedInUser.id); // Removed: useEffect will handle this
                 } else {
-                    loadData();
+                    // loadData(); // Removed: useEffect will handle this
                 }
             }
         });
@@ -97,11 +97,11 @@ const App: React.FC = () => {
                         mustChangePassword: session.user.user_metadata?.must_change_password
                     };
                     setUser(loggedInUser);
-                    loadData(loggedInUser.id);
+                    // loadData(loggedInUser.id); // Removed: useEffect will handle this
                 } else {
                     setUser(null);
                     setCompletedSkills([]);
-                    loadData();
+                    // loadData(); // Removed: useEffect will handle this
                 }
             }
         });
@@ -116,6 +116,8 @@ const App: React.FC = () => {
         // We only set isLoading(true) if we don't have any data yet (first load)
         const isInitialLoad = texts.length === 0;
         if (isInitialLoad) setIsLoading(true);
+
+        console.log("loadData triggered for user:", userId || 'anonymous');
 
         try {
             // Define fetchers with their corresponding setters
@@ -161,6 +163,12 @@ const App: React.FC = () => {
         }
     };
 
+    // Effect to handle data loading when user changes
+    // This centralizes loading and prevents multiple calls
+    useEffect(() => {
+        loadData(user?.id);
+    }, [user?.id]);
+
     const handleOpenLoginModal = () => {
         setLoginError('');
         setIsLoginModalOpen(true);
@@ -169,17 +177,18 @@ const App: React.FC = () => {
     const handleAttemptLogin = async (email: string, pass: string) => {
         try {
             const loggedInUser = await signIn(email, pass);
+            // Close modal IMMEDIATELY for better perceived performance
+            setIsLoginModalOpen(false);
+
             if (loggedInUser.mustChangePassword) {
                 setUserForPasswordChange(loggedInUser);
-                setIsLoginModalOpen(false);
                 setIsForceChangePasswordModalOpen(true);
             } else {
                 setUser(loggedInUser);
-                setIsLoginModalOpen(false);
                 if (loggedInUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
                     setActivePage('admin');
                 }
-                loadData(loggedInUser.id);
+                // loadData(loggedInUser.id); // Removed: useEffect handles this
             }
         } catch (error: any) {
             console.error("Login attempt failed:", error);

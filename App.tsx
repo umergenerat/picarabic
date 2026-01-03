@@ -66,42 +66,42 @@ const App: React.FC = () => {
 
         let mounted = true;
 
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
             if (mounted) {
                 if (session) {
-                    const profile = await getUserProfile(session.user.id);
-                    const loggedInUser: User = profile || {
+                    const metadata = session.user.user_metadata;
+                    const loggedInUser: User = {
                         id: session.user.id,
-                        displayName: session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'User',
+                        displayName: metadata?.display_name || metadata?.name || session.user.email?.split('@')[0] || 'User',
                         email: session.user.email || '',
-                        photoURL: session.user.user_metadata?.photo_url || `https://i.pravatar.cc/150?u=${session.user.id}`,
-                        mustChangePassword: session.user.user_metadata?.must_change_password
+                        photoURL: metadata?.photo_url || `https://i.pravatar.cc/150?u=${session.user.id}`,
+                        mustChangePassword: metadata?.must_change_password
                     };
                     setUser(loggedInUser);
-                    // loadData(loggedInUser.id); // Removed: useEffect will handle this
-                } else {
-                    // loadData(); // Removed: useEffect will handle this
+
+                    // Fetch full profile in background but set user now
+                    getUserProfile(session.user.id).then(profile => {
+                        if (mounted && profile) setUser(prev => ({ ...prev, ...profile }));
+                    });
                 }
             }
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (mounted) {
-                if (session) {
-                    const profile = await getUserProfile(session.user.id);
-                    const loggedInUser: User = profile || {
+                if (event === 'SIGNED_IN' && session) {
+                    const metadata = session.user.user_metadata;
+                    const loggedInUser: User = {
                         id: session.user.id,
-                        displayName: session.user.user_metadata?.display_name,
+                        displayName: metadata?.display_name || metadata?.name,
                         email: session.user.email || '',
-                        photoURL: session.user.user_metadata?.photo_url,
-                        mustChangePassword: session.user.user_metadata?.must_change_password
+                        photoURL: metadata?.photo_url,
+                        mustChangePassword: metadata?.must_change_password
                     };
                     setUser(loggedInUser);
-                    // loadData(loggedInUser.id); // Removed: useEffect will handle this
-                } else {
+                } else if (event === 'SIGNED_OUT') {
                     setUser(null);
                     setCompletedSkills([]);
-                    // loadData(); // Removed: useEffect will handle this
                 }
             }
         });
@@ -113,41 +113,46 @@ const App: React.FC = () => {
     }, []);
 
     const loadData = async (userId?: string) => {
+        const startTime = performance.now();
         // We only set isLoading(true) if we don't have any data yet (first load)
         const isInitialLoad = texts.length === 0;
         if (isInitialLoad) setIsLoading(true);
 
-        console.log("loadData triggered for user:", userId || 'anonymous');
+        console.log(`loadData triggered for user: ${userId || 'anonymous'} at ${startTime}`);
 
         try {
             // Define fetchers with their corresponding setters
             const fetchers = [
-                { fn: db.getTexts, set: setTexts },
-                { fn: db.getSkills, set: setSkills },
-                { fn: db.getTeams, set: setTeams },
-                { fn: db.getResources, set: setResources },
-                { fn: db.getSpecializations, set: setSpecializations },
-                { fn: db.getProgressData, set: setStudentProgressData },
-                { fn: db.getChatChannels, set: setChatChannels },
-                { fn: db.getTestContexts, set: setTestContexts }
+                { id: 'texts', fn: db.getTexts, set: setTexts },
+                { id: 'skills', fn: db.getSkills, set: setSkills },
+                { id: 'teams', fn: db.getTeams, set: setTeams },
+                { id: 'resources', fn: db.getResources, set: setResources },
+                { id: 'specializations', fn: db.getSpecializations, set: setSpecializations },
+                { id: 'progress', fn: db.getProgressData, set: setStudentProgressData },
+                { id: 'chat', fn: db.getChatChannels, set: setChatChannels },
+                { id: 'tests', fn: db.getTestContexts, set: setTestContexts }
             ];
 
             // Start all fetches in parallel and update state as each one completes
             const promises = fetchers.map(async (f) => {
+                const s = performance.now();
                 try {
                     const data = await f.fn();
                     f.set(data);
+                    console.log(`Fetch ${f.id} took: ${performance.now() - s}ms`);
                 } catch (err) {
-                    console.error(`Error loading data from ${f.fn.name}:`, err);
+                    console.error(`Error loading data from ${f.id}:`, err);
                 }
             });
 
             // Handle user-specific data
             if (userId) {
                 promises.push((async () => {
+                    const s = performance.now();
                     try {
                         const cs = await db.getCompletedSkills(userId);
                         setCompletedSkills(cs);
+                        console.log(`Fetch completedSkills took: ${performance.now() - s}ms`);
                     } catch (err) {
                         console.error("Error loading completed skills:", err);
                     }
@@ -156,6 +161,7 @@ const App: React.FC = () => {
 
             // We await all promises to know when the BIG loading operation is finished
             await Promise.all(promises);
+            console.log(`Core data load finished in: ${performance.now() - startTime}ms`);
         } catch (err) {
             console.error("Error in loadData:", err);
         } finally {

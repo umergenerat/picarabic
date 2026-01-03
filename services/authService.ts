@@ -20,14 +20,15 @@ export const signIn = async (email: string, password: string): Promise<User> => 
         password: password.trim(),
     });
 
+    const authTime = performance.now();
+    console.log(`Supabase Auth took: ${authTime - startTime}ms`);
+
     if (error) {
         console.error("Supabase Auth sign-in failure:", error.message, error.status);
         throw new Error(error.message || 'login.error');
     }
 
-    console.log("Supabase Auth success, extracting metadata for:", data.user.id);
-
-    // Optimization: Use user_metadata immediately if available to avoid blocking for the profile fetch
+    // Optimization: Trust metadata for EVERYTHING initially if possible
     const metadata = data.user.user_metadata;
     const initialUser: User = {
         id: data.user.id,
@@ -37,16 +38,28 @@ export const signIn = async (email: string, password: string): Promise<User> => 
         mustChangePassword: metadata?.must_change_password || false
     };
 
-    // We still fetch the profile in the background to ensure data consistency,
-    // but we can return the initialUser immediately if it looks complete enough.
-    // However, since mustChangePassword is critical, we'll do a quick check.
+    // If we have enough metadata, we can actually return right now and fetch profile in background
+    // This makes the transition feel instant!
 
-    // For now, let's keep it sequential but optimized by selecting only needed fields
+    // Background profile fetch - don't await it if we have metadata
+    // BUT we need must_change_password surely. If it's in metadata, we're good.
+    if (metadata && metadata.display_name && metadata.must_change_password !== undefined) {
+        console.log("Returning initial user from metadata... Profile fetch will continue in background.");
+        supabase.from('profiles').select('name, display_name, photo_url, must_change_password').eq('id', data.user.id).single(); // Fire and forget
+        return initialUser;
+    }
+
+    // If metadata is sparse, we must wait for profile
+    console.log("Metadata sparse, waiting for profile fetch.");
+    const profileStart = performance.now();
     const { data: profile } = await supabase
         .from('profiles')
         .select('name, display_name, photo_url, must_change_password')
         .eq('id', data.user.id)
         .single();
+
+    const profileEnd = performance.now();
+    console.log(`Profile fetch took: ${profileEnd - profileStart}ms`);
 
     if (profile) {
         return {

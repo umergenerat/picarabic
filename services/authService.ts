@@ -5,6 +5,7 @@ import { supabase } from './supabaseClient';
 export const ADMIN_EMAIL = 'aitloutouaom@gmail.com';
 
 export const signIn = async (email: string, password: string): Promise<User> => {
+    const startTime = performance.now();
     console.log("Sign-in attempt:", email, "Supabase connected:", !!supabase);
 
     if (!supabase) {

@@ -113,30 +113,49 @@ const App: React.FC = () => {
     }, []);
 
     const loadData = async (userId?: string) => {
-        setIsLoading(true);
+        // We only set isLoading(true) if we don't have any data yet (first load)
+        const isInitialLoad = texts.length === 0;
+        if (isInitialLoad) setIsLoading(true);
+
         try {
-            const [t, s, tm, rc, sp, pd, cc, tc, cs] = await Promise.all([
-                db.getTexts(),
-                db.getSkills(),
-                db.getTeams(),
-                db.getResources(),
-                db.getSpecializations(),
-                db.getProgressData(),
-                db.getChatChannels(),
-                db.getTestContexts(),
-                userId ? db.getCompletedSkills(userId) : Promise.resolve([])
-            ]);
-            setTexts(t);
-            setSkills(s);
-            setTeams(tm);
-            setResources(rc);
-            setSpecializations(sp);
-            setStudentProgressData(pd);
-            setChatChannels(cc);
-            setTestContexts(tc);
-            setCompletedSkills(cs);
+            // Define fetchers with their corresponding setters
+            const fetchers = [
+                { fn: db.getTexts, set: setTexts },
+                { fn: db.getSkills, set: setSkills },
+                { fn: db.getTeams, set: setTeams },
+                { fn: db.getResources, set: setResources },
+                { fn: db.getSpecializations, set: setSpecializations },
+                { fn: db.getProgressData, set: setStudentProgressData },
+                { fn: db.getChatChannels, set: setChatChannels },
+                { fn: db.getTestContexts, set: setTestContexts }
+            ];
+
+            // Start all fetches in parallel and update state as each one completes
+            const promises = fetchers.map(async (f) => {
+                try {
+                    const data = await f.fn();
+                    f.set(data);
+                } catch (err) {
+                    console.error(`Error loading data from ${f.fn.name}:`, err);
+                }
+            });
+
+            // Handle user-specific data
+            if (userId) {
+                promises.push((async () => {
+                    try {
+                        const cs = await db.getCompletedSkills(userId);
+                        setCompletedSkills(cs);
+                    } catch (err) {
+                        console.error("Error loading completed skills:", err);
+                    }
+                })());
+            }
+
+            // We await all promises to know when the BIG loading operation is finished
+            await Promise.all(promises);
         } catch (err) {
-            console.error("Error loading data:", err);
+            console.error("Error in loadData:", err);
         } finally {
             setIsLoading(false);
         }
@@ -214,31 +233,59 @@ const App: React.FC = () => {
     };
 
     const renderPage = () => {
+        // Home page is always instantly available
         if (activePage === 'home') return <HomePage />;
-        if (isLoading) return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
+
+        // Helper to render a page with a partial loading state if it's the first time
+        const withLoader = (component: React.ReactNode, isDataReady: boolean) => {
+            if (activePage === 'admin' && isLoading) {
+                // Admin page usually needs everything, so keep the global loader
+                return (
+                    <div className="flex justify-center items-center h-full">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                    </div>
+                );
+            }
+
+            if (!isDataReady && isLoading) {
+                return (
+                    <div className="flex justify-center items-center h-full">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                    </div>
+                );
+            }
+            return component;
+        };
 
         switch (activePage) {
-            case 'home': return <HomePage />;
-            case 'texts': return user ? <TextsSection texts={texts} skills={skills} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'skills': return user ? <SkillsSection skills={skills} completedSkills={completedSkills} setCompletedSkills={setCompletedSkills} specializations={specializations} user={user} onConsultExpert={() => navigateToChat('soft-skills-expert')} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'presentations': return <PresentationsSection teams={teams} setTeams={setTeams} user={user} isAdmin={isAdmin} />;
-            case 'tests': return user ? <TestsSection testContexts={testContexts} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'chat': return <ChatSection user={user} chatChannels={chatChannels} setChatChannels={setChatChannels} />;
-            case 'resources': return user ? <ResourcesSection resources={resources} /> : <LoginRequired onLogin={handleOpenLoginModal} />;
-            case 'dashboard': return <DashboardPage progressData={studentProgressData} />;
-            case 'admin': return isAdmin ? <AdminPage
-                texts={texts} setTexts={setTexts}
-                skills={skills} setSkills={setSkills}
-                teams={teams} setTeams={setTeams}
-                testContexts={testContexts} setTestContexts={setTestContexts}
-                chatChannels={chatChannels} setChatChannels={setChatChannels}
-                resources={resources} setResources={setResources}
-                specializations={specializations} setSpecializations={setSpecializations}
-                logoSrc={logoSrc} setLogoSrc={setLogoSrc}
-                progressData={studentProgressData}
-                setProgressData={setStudentProgressData}
-                refreshData={loadData}
-            /> : <HomePage />;
+            case 'texts':
+                return user ? withLoader(<TextsSection texts={texts} skills={skills} />, texts.length > 0) : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'skills':
+                return user ? withLoader(<SkillsSection skills={skills} completedSkills={completedSkills} setCompletedSkills={setCompletedSkills} specializations={specializations} user={user} onConsultExpert={() => navigateToChat('soft-skills-expert')} />, skills.length > 0) : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'presentations':
+                return withLoader(<PresentationsSection teams={teams} setTeams={setTeams} user={user} isAdmin={isAdmin} />, teams.length > 0);
+            case 'tests':
+                return user ? withLoader(<TestsSection testContexts={testContexts} />, testContexts.length > 0) : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'chat':
+                return withLoader(<ChatSection user={user} chatChannels={chatChannels} setChatChannels={setChatChannels} />, chatChannels.length > 0);
+            case 'resources':
+                return user ? withLoader(<ResourcesSection resources={resources} />, resources.length > 0) : <LoginRequired onLogin={handleOpenLoginModal} />;
+            case 'dashboard':
+                return withLoader(<DashboardPage progressData={studentProgressData} />, studentProgressData.length > 0);
+            case 'admin':
+                return isAdmin ? <AdminPage
+                    texts={texts} setTexts={setTexts}
+                    skills={skills} setSkills={setSkills}
+                    teams={teams} setTeams={setTeams}
+                    testContexts={testContexts} setTestContexts={setTestContexts}
+                    chatChannels={chatChannels} setChatChannels={setChatChannels}
+                    resources={resources} setResources={setResources}
+                    specializations={specializations} setSpecializations={setSpecializations}
+                    logoSrc={logoSrc} setLogoSrc={setLogoSrc}
+                    progressData={studentProgressData}
+                    setProgressData={setStudentProgressData}
+                    refreshData={loadData}
+                /> : <HomePage />;
             default: return <HomePage />;
         }
     };

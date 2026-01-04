@@ -180,7 +180,7 @@ const TextsSection: React.FC<TextsSectionProps> = ({ texts, skills }) => {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
                         <div className="lg:col-span-2 space-y-6">
-                            <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedText.content[locale] }} />
+                            <div className="prose dark:prose-invert max-w-3xl mx-auto text-slate-800 dark:text-slate-200 text-lg leading-loose tracking-wide font-relaxed shadow-sm p-6 md:p-8 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50" dangerouslySetInnerHTML={{ __html: selectedText.content[locale] }} />
                         </div>
 
                         <div className="space-y-6">
@@ -408,11 +408,13 @@ const TextsSection: React.FC<TextsSectionProps> = ({ texts, skills }) => {
                                     <DifficultyBadge level={text.difficulty} />
                                 </div>
                                 <h3 className="text-xl font-bold mb-3 text-slate-900 group-hover:text-primary-600 transition-colors dark:text-white line-clamp-2">{text.title[locale]}</h3>
-                                <div className="text-slate-600 dark:text-slate-400 text-sm line-clamp-3 mb-6" dangerouslySetInnerHTML={{ __html: text.content[locale].replace(/<[^>]*>?/gm, ' ') }}></div>
+                                <div className="text-slate-600 dark:text-slate-400 text-sm line-clamp-4 mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: text.content[locale].replace(/<[^>]*>?/gm, ' ') }}></div>
 
-                                <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-800">
-                                    <span className="flex items-center gap-1"><BookOpenIcon className="h-3 w-3" /> {text.questions.length} {locale === 'ar' ? 'أسئلة' : 'Questions'}</span>
-                                    <span className="flex items-center gap-1 uppercase">{locale === 'ar' ? 'ابدأ القراءة' : 'Start Reading'} →</span>
+                                <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                                    <span className="flex items-center gap-1"><BookOpenIcon className="h-4 w-4" /> {text.questions.length} {locale === 'ar' ? 'أسئلة' : 'Questions'}</span>
+                                    <span className="flex items-center gap-1 uppercase bg-primary-50 text-primary-700 px-3 py-1.5 rounded-full group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                                        {locale === 'ar' ? 'ابدأ القراءة' : 'Start Reading'} {locale === 'ar' ? '←' : '→'}
+                                    </span>
                                 </div>
                             </div>
                         </Card>

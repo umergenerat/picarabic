@@ -317,9 +317,9 @@ const App: React.FC = () => {
                 navItems={navItems}
                 onExit={handleExit}
             />
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
                 <Header user={user} onLogin={handleOpenLoginModal} onLogout={handleLogout} logoSrc={logoSrc} onToggleSidebar={() => setIsSidebarOpen(true)} />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-100 dark:bg-slate-900 p-4 sm:p-6 lg:p-8">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/50 dark:bg-slate-900/50 p-4 sm:p-6 lg:p-8 scroll-smooth will-change-transform">
                     {renderPage()}
                 </main>
             </div>

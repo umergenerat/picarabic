@@ -18,6 +18,17 @@ export interface QuizQuestion {
     question: string;
     options: string[];
     correctAnswer: string;
+    explanation?: string;
+}
+
+export interface QuizResult {
+    id: string;
+    date: string;
+    score: number;
+    totalQuestions: number;
+    correctAnswers: number;
+    context: TestContext;
+    timeSpentSeconds: number;
 }
 
 export interface Skill {

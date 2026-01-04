@@ -21,9 +21,10 @@ const NavLink: React.FC<{
     isActive: boolean;
     onClick: () => void;
 }> = ({ icon: Icon, label, isActive, onClick }) => {
-    const baseClasses = 'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-slate-800';
-    const activeClasses = 'bg-primary-50 dark:bg-slate-700 text-primary-600 dark:text-white font-semibold';
-    const inactiveClasses = 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700';
+    // Premium NavLink Styles
+    const baseClasses = 'flex items-center px-4 py-3.5 mx-2 text-sm font-medium rounded-xl transition-all duration-300 group relative overflow-hidden';
+    const activeClasses = 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-bold shadow-sm';
+    const inactiveClasses = 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200';
 
     return (
         <a
@@ -35,7 +36,10 @@ const NavLink: React.FC<{
             className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
             aria-current={isActive ? 'page' : undefined}
         >
-            <Icon className="h-5 w-5 mx-2" aria-hidden="true" />
+            {isActive && (
+                <span className="absolute inset-y-0 left-0 w-1 bg-primary-500 rounded-r-full" aria-hidden="true" />
+            )}
+            <Icon className={`h-5 w-5 mx-3 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} aria-hidden="true" />
             <span className="truncate">{label}</span>
         </a>
     );
@@ -47,8 +51,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, isAdmin, l
 
     const handleLinkClick = (page: Page) => {
         setActivePage(page);
-        // Always close sidebar on selection. On desktop this is harmless as sidebar is fixed/relative visible.
-        // On mobile this ensures the menu closes after selection.
         setIsOpen(false);
     };
 
@@ -58,28 +60,36 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, isAdmin, l
 
     return (
         <>
-            {/* Overlay for mobile */}
+            {/* Mobile Overlay */}
             <div
-                className={`fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-500 ease-in-out ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={() => setIsOpen(false)}
                 aria-hidden="true"
             ></div>
 
             <aside
-                className={`fixed md:relative inset-y-0 z-40 w-64 flex-shrink-0 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 p-4 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${sidebarDirectionClasses}`}
+                className={`fixed md:relative inset-y-0 z-50 w-72 flex-shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-slate-200/50 dark:border-slate-800/50 flex flex-col transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) md:translate-x-0 shadow-2xl md:shadow-none ${sidebarDirectionClasses}`}
                 aria-label="Sidebar"
+                style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
             >
-                <div className="flex items-center justify-center mb-6 h-12">
+                {/* Logo Area */}
+                <div className="flex items-center justify-center h-20 border-b border-slate-100 dark:border-slate-800 mb-2">
                     {logoSrc ? (
-                        <img src={logoSrc} alt={t('global.platformTitle')} className="h-12 object-contain" />
+                        <img src={logoSrc} alt={t('global.platformTitle')} className="h-14 object-contain animate-fade-in" />
                     ) : (
-                        <>
-                            <AcademicCapIcon className="h-10 w-10 text-primary-500" />
-                            <span className="mx-2 text-lg font-bold">ISTA TATA</span>
-                        </>
+                        <div className="flex items-center gap-3">
+                            <div className="bg-primary-500/10 p-2 rounded-xl">
+                                <AcademicCapIcon className="h-8 w-8 text-primary-600" />
+                            </div>
+                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-400">
+                                ISTA TATA
+                            </span>
+                        </div>
                     )}
                 </div>
-                <nav className="flex-1 space-y-2">
+
+                {/* Navigation Items */}
+                <nav className="flex-1 space-y-1 px-2 overflow-y-auto scrollbar-hide py-4">
                     {visibleNavItems.map(item => (
                         <NavLink
                             key={item.id}
@@ -90,17 +100,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, isAdmin, l
                         />
                     ))}
                 </nav>
-                <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-700">
+
+                {/* Footer Actions */}
+                <div className="p-4 border-t border-slate-200/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/30">
                     <button
                         onClick={onExit}
-                        className="flex items-center w-full px-4 py-3 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors group"
+                        className="flex items-center justify-center w-full px-4 py-3 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-300 group hover:shadow-sm"
                     >
                         <PowerIcon className="h-5 w-5 mx-2 group-hover:scale-110 transition-transform" />
                         <span>{t('global.exit')}</span>
                     </button>
-                </div>
-                <div className="mt-4 text-center text-xs text-slate-500">
-                    <p>{t('global.copyright')}</p>
+                    <div className="mt-4 text-center">
+                        <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity">
+                            {t('global.copyright')} &copy; 2025
+                        </p>
+                    </div>
                 </div>
             </aside>
         </>

@@ -8,11 +8,28 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({ children, className = '', onClick }) => {
-    const cardClasses = `bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 border border-slate-200/80 dark:border-slate-700/80 hover:shadow-xl hover:border-slate-300 dark:hover:border-slate-600 ${onClick ? 'cursor-pointer' : ''} ${className}`;
+    // Premium Card Styles with Glassmorphism
+    const cardClasses = `
+        relative
+        bg-white/80 dark:bg-slate-800/80 
+        backdrop-blur-sm
+        rounded-2xl 
+        shadow-sm hover:shadow-lg 
+        border border-slate-100 dark:border-slate-700/60
+        transition-all duration-300 ease-out
+        ${onClick ? 'cursor-pointer hover:-translate-y-1 hover:border-primary-200 dark:hover:border-primary-900' : ''} 
+        ${className}
+    `;
 
     return (
         <div className={cardClasses} onClick={onClick}>
-            {children}
+            {/* Optional subtle gradient overlay */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 dark:to-transparent pointer-events-none" />
+
+            {/* Content wrapper */}
+            <div className="relative z-10">
+                {children}
+            </div>
         </div>
     );
 };

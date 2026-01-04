@@ -1295,9 +1295,12 @@ const AdminPage: React.FC<any> = (props) => {
                                 <UserEditForm user={editingItem} specializations={props.specializations} onSave={handleSaveUser} onCancel={() => setEditingItem(null)} />
                             </Card>
                         ) : (
-                            <Card className="p-6">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="font-bold">إدارة المتدربين الحالية</h3>
+                            <Card className="glass-panel border-none shadow-soft">
+                                <div className="flex items-center justify-between mb-4 flex-wrap gap-2 p-6 pb-0">
+                                    <h3 className="font-bold text-lg">{t('admin.traineesList')}</h3>
+                                    <span className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-xs font-bold">{platformUsers.length} متدرب</span>
+                                </div>
+                                <div className="flex justify-end items-center mb-6 px-6">
                                     <div className="flex gap-2">
                                         <label className="cursor-pointer">
                                             <input type="file" className="hidden" onChange={handleImportFile} accept=".csv,.json,.pdf,.png,.jpg,.jpeg,.xlsx,.xls" />
@@ -1311,19 +1314,19 @@ const AdminPage: React.FC<any> = (props) => {
                                         </Button>
                                     </div>
                                 </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead><tr className="text-slate-500 border-b"><th className="pb-3 text-start">الاسم</th><th className="pb-3 text-start">التخصص</th><th className="pb-3 text-start">الحالة</th><th className="pb-3 text-center">الإجراءات</th></tr></thead>
-                                        <tbody className="divide-y">
+                                <div className="overflow-x-auto p-6 pt-2">
+                                    <table className="w-full text-sm min-w-[600px]">
+                                        <thead><tr className="text-slate-500 border-b dark:border-slate-700"><th className="pb-3 text-start">الاسم</th><th className="pb-3 text-start">التخصص</th><th className="pb-3 text-start">الحالة</th><th className="pb-3 text-center">الإجراءات</th></tr></thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                             {platformUsers.map(u => (
-                                                <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                                                <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                     <td className="py-3 font-medium">{u.name}</td>
-                                                    <td className="py-3">{u.specialization}</td>
-                                                    <td className="py-3"><span className={`px-2 py-0.5 rounded-full text-[10px] ${u.status === 'نشط' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{u.status}</span></td>
+                                                    <td className="py-3 text-slate-600 dark:text-slate-400">{u.specialization}</td>
+                                                    <td className="py-3"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${u.status === 'نشط' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{u.status}</span></td>
                                                     <td className="py-3 text-center">
                                                         <div className="flex items-center justify-center gap-2">
-                                                            <button onClick={() => setEditingItem(u)} className="p-1 hover:text-primary-600" title="تعديل"><PencilIcon className="h-4 w-4" /></button>
-                                                            <button onClick={() => handleDeleteUser(u.id)} className="p-1 hover:text-red-600 text-slate-400" title="حذف"><TrashIcon className="h-4 w-4" /></button>
+                                                            <button onClick={() => setEditingItem(u)} className="p-1.5 hover:bg-primary-50 rounded-lg text-primary-600 hover:text-primary-700 transition-colors" title="تعديل"><PencilIcon className="h-4 w-4" /></button>
+                                                            <button onClick={() => handleDeleteUser(u.id)} className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors" title="حذف"><TrashIcon className="h-4 w-4" /></button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -1400,7 +1403,7 @@ const AdminPage: React.FC<any> = (props) => {
                     </Card>
                 )
             }
-        </div >
+        </div>
     );
 };
 

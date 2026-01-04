@@ -16,16 +16,16 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const [apiKey, _setApiKey] = useState<string | null>(localStorage.getItem('VITE_GEMINI_API_KEY'));
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Resolve queue for pending API key requests
-    const resolvers = useRef<((value: string) => void)[]>([]);
+    // Resolve/Reject queue for pending API key requests
+    const pendingRequests = useRef<{ resolve: (value: string) => void, reject: (reason?: any) => void }[]>([]);
 
     const setApiKey = useCallback((key: string) => {
         localStorage.setItem('VITE_GEMINI_API_KEY', key);
         _setApiKey(key);
         setIsModalOpen(false);
         // Resolve all pending requests
-        resolvers.current.forEach(resolve => resolve(key));
-        resolvers.current = [];
+        pendingRequests.current.forEach(({ resolve }) => resolve(key));
+        pendingRequests.current = [];
     }, []);
 
     const clearApiKey = useCallback(() => {
@@ -37,8 +37,8 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         if (apiKey) return Promise.resolve(apiKey);
 
         // If no key, show modal and return a promise
-        return new Promise((resolve) => {
-            resolvers.current.push(resolve);
+        return new Promise((resolve, reject) => {
+            pendingRequests.current.push({ resolve, reject });
             if (!isModalOpen) {
                 setIsModalOpen(true);
             }
@@ -47,8 +47,9 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     const closeModal = useCallback(() => {
         setIsModalOpen(false);
-        // Optionally reject pending requests or just leave them hanging/reset
-        resolvers.current = [];
+        // Reject all pending requests as the user cancelled
+        pendingRequests.current.forEach(({ reject }) => reject(new Error('User cancelled API key entry')));
+        pendingRequests.current = [];
     }, []);
 
     return (

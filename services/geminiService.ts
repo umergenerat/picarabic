@@ -95,38 +95,62 @@ const STABLE_MODEL = "gemini-1.5-flash";
 const INTELLIGENT_MODEL = "gemini-1.5-pro";
 
 /**
- * Robustly executes an AI task with fallback and error sanitization.
+ * Delay utility for retry mechanism
+ */
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Robustly executes an AI task with retry logic, fallback, and error sanitization.
  */
 const runAiTask = async (
     apiKey: string | undefined,
     task: (ai: any, model: string) => Promise<any>,
-    description: string
+    description: string,
+    maxRetries: number = 2
 ): Promise<any> => {
-    try {
-        const ai = getAiClient(apiKey);
-        // Try with the intelligent model first for better results
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(`AI Task: ${description} (Attempting ${INTELLIGENT_MODEL})`);
-            return await task(ai, INTELLIGENT_MODEL);
-        } catch (firstError: any) {
-            console.warn(`${INTELLIGENT_MODEL} failed, falling back to ${STABLE_MODEL}:`, firstError.message);
-            // Fallback to the stable model
-            return await task(ai, STABLE_MODEL);
-        }
-    } catch (error: any) {
-        console.error(`AI Task Failure [${description}]:`, error);
+            const ai = getAiClient(apiKey);
 
-        // Sanitize error messages for the user
-        if (error.message?.includes('API key')) {
-            throw new Error("تنبيه: مفتاح الذكاء الاصطناعي غير صالح. يرجى التحقق من الإعدادات.");
-        } else if (error.message?.includes('quota') || error.message?.includes('429')) {
-            throw new Error("عذراً، تم الوصول للحد الأقصى للطلبات حالياً. يرجى المحاولة بعد قليل.");
-        } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
-            throw new Error("خطأ في الاتصال بالشبكة. يرجى التأكد من اتصالك بالإنترنت.");
-        }
+            // Try with the intelligent model first for better results
+            try {
+                console.log(`AI Task: ${description} (Attempt ${attempt}/${maxRetries}, Model: ${INTELLIGENT_MODEL})`);
+                return await task(ai, INTELLIGENT_MODEL);
+            } catch (firstError: any) {
+                console.warn(`${INTELLIGENT_MODEL} failed, falling back to ${STABLE_MODEL}:`, firstError.message);
+                // Fallback to the stable model
+                return await task(ai, STABLE_MODEL);
+            }
+        } catch (error: any) {
+            lastError = error;
+            console.error(`AI Task Failure [${description}] (Attempt ${attempt}/${maxRetries}):`, error.message);
 
-        throw new Error("عذراً، حدث خطأ ذكي غير متوقع. جاري العمل على تحسين التجربة.");
+            // Don't retry for specific errors
+            if (error.message?.includes('API key') || error.message?.includes('quota') || error.message?.includes('429')) {
+                break;
+            }
+
+            // Wait before retrying with exponential backoff
+            if (attempt < maxRetries) {
+                const waitTime = attempt * 1500; // 1.5s, 3s, etc.
+                console.log(`Retrying in ${waitTime}ms...`);
+                await delay(waitTime);
+            }
+        }
     }
+
+    // Sanitize error messages for the user
+    if (lastError?.message?.includes('API key')) {
+        throw new Error("تنبيه: مفتاح الذكاء الاصطناعي غير صالح. يرجى التحقق من الإعدادات.");
+    } else if (lastError?.message?.includes('quota') || lastError?.message?.includes('429')) {
+        throw new Error("عذراً، تم الوصول للحد الأقصى للطلبات حالياً. يرجى المحاولة بعد قليل.");
+    } else if (lastError?.message?.includes('network') || lastError?.message?.includes('fetch')) {
+        throw new Error("خطأ في الاتصال بالشبكة. يرجى التأكد من اتصالك بالإنترنت.");
+    }
+
+    throw new Error("عذراً، فشل الاتصال بخدمة الذكاء الاصطناعي. يمكنك استخدام المحتوى البديل.");
 };
 
 /**
@@ -152,7 +176,29 @@ export const generateQuiz = async (context: string, apiKey?: string): Promise<Qu
     return runAiTask(apiKey, async (ai, model) => {
         const response = await ai.models.generateContent({
             model: model,
-            contents: `أنت خبير تربوي. بناءً على النص القادم، قم بإنشاء 5 أسئلة اختيار من متعدد نوعية وعميقة باللغة العربية لاختبار فهم المتدرب وتطبيقه للمفاهيم. يجب أن يكون لكل سؤال أربعة خيارات ذكية (مشتتات واقعية)، مع تحديد الإجابة الصحيحة. النص هو: """${context}"""`,
+            contents: `أنت خبير تربوي متمرس في تصميم الاختبارات التقويمية.
+
+## المطلوب:
+قم بإنشاء 5 أسئلة اختيار من متعدد عالية الجودة باللغة العربية بناءً على النص المرفق.
+
+## معايير الأسئلة:
+1. **التنوع المعرفي**: اجعل الأسئلة تغطي مستويات بلوم المختلفة (تذكر، فهم، تطبيق، تحليل)
+2. **الوضوح**: صياغة واضحة ومباشرة بدون غموض
+3. **المشتتات الذكية**: اجعل الخيارات الخاطئة منطقية وواقعية (ليست سخيفة)
+4. **الإجابة الصحيحة**: يجب أن تكون واحدة فقط وواضحة
+5. **الارتباط بالنص**: كل سؤال يجب أن يرتبط مباشرة بمحتوى النص
+
+## مثال على سؤال جيد:
+{
+  "question": "ما النسبة التي تمثلها المقاولات الصغرى والمتوسطة من النسيج المقاولاتي المغربي؟",
+  "options": ["75%", "85%", "95%", "55%"],
+  "correctAnswer": "95%"
+}
+
+## النص المرجعي:
+"""${context}"""
+
+أنتج 5 أسئلة بهذا المستوى من الجودة.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: questionGenerationSchema
@@ -201,20 +247,32 @@ export const generateSkillScenario = async (
     return runAiTask(apiKey, async (ai, model) => {
         const response = await ai.models.generateContent({
             model: model,
-            contents: `أنت مدرب تطوير مهني وخبير عالمي في المهارات الناعمة (Soft Skills Expert). 
-            المطلوب: إنشاء "تحدي سيناريو" (Scenario-based Challenge) واقعي ومعقد للمهارة التالية:
-            
-            - المهارة: '${skillTitle}'
-            - وصفها: '${skillDescription}'
-            - التخصص المهني: '${specialization}' 
+            contents: `أنت مدرب تطوير مهني محترف ومتخصص في المهارات الناعمة (Soft Skills Coach).
 
-            إرشادات السيناريو:
-            1. ابدأ بوصف موقف مهني محدد يواجهه المتدرب في عمله (مثال: اجتماع حاسم، مشكلة مع زبون، ضغط عمل).
-            2. اجعل الموقف يتطلب استخدام ذكي جداً للمهارة المذكورة أعلاه للنجاح فيه.
-            3. لا تقدم الحل، بل توقف عند ذروة المشكلة.
-            4. اطرح سؤالاً مفتوحاً وذكياً: "كيف ستتصرف في هذا الموقف للحفاظ على احترافيتك وتحقيق أفضل نتيجة؟".
-            
-            اللغة: عربية مهنية رفيعة المستوى.`,
+## المهمة:
+أنشئ سيناريو تدريبي واقعي ومشوق لتطوير المهارة التالية.
+
+## معلومات المهارة:
+- **اسم المهارة**: ${skillTitle}
+- **الوصف**: ${skillDescription}
+- **التخصص المهني للمتدرب**: ${specialization}
+
+## متطلبات السيناريو:
+1. **الواقعية**: اجعل الموقف مستوحى من بيئة العمل الحقيقية في مجال "${specialization}"
+2. **التعقيد المناسب**: ليس سهلاً جداً ولا مستحيلاً - تحدٍ قابل للحل بتفكير عميق
+3. **الشخصيات**: أضف شخصيات واقعية (زملاء، مدراء، زبائن) مع أسماء مغربية
+4. **التوتر الدرامي**: ابنِ الموقف تدريجياً حتى ذروة التحدي
+5. **عدم إعطاء الحل**: توقف عند لحظة اتخاذ القرار
+
+## مثال على بنية السيناريو:
+- الفقرة 1: تقديم الموقف والسياق
+- الفقرة 2: تصاعد المشكلة
+- الفقرة 3: ذروة التحدي (اللحظة الحاسمة)
+
+## السؤال:
+اختم بسؤال مفتوح يدفع المتدرب للتفكير في كيفية استخدام مهارة "${skillTitle}" لحل الموقف.
+
+اللغة: عربية فصحى مهنية وسلسة.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: skillScenarioSchema

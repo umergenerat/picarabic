@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Skill, Specialization, User } from '../../types';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import Spinner from '../common/Spinner';
-import { iconMap, SparklesIcon, CheckCircleIcon, LightBulbIcon, XMarkIcon } from '../common/Icons';
+import { iconMap, SparklesIcon, CheckCircleIcon, LightBulbIcon, XMarkIcon, ArrowPathIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
 import { useAi } from '../../contexts/AiContext';
 import { generateSkillScenario, evaluateSkillAnswer } from '../../services/geminiService';
+import { getFallbackScenario, getFallbackSkillEvaluation } from '../../data/fallbackData';
 
 interface SkillPracticeModalProps {
     skill: Skill;
@@ -26,46 +27,87 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
     const [isLoadingScenario, setIsLoadingScenario] = useState(true);
     const [isEvaluating, setIsEvaluating] = useState(false);
     const [error, setError] = useState('');
+    const [usedFallback, setUsedFallback] = useState(false);
 
-    useEffect(() => {
-        const fetchScenario = async () => {
-            setIsLoadingScenario(true);
-            setError('');
-            try {
-                const apiKey = await getApiKey();
-                const channels = await import('../../services/dataService').then(m => m.getChatChannels());
-                const expert = channels.find(c => c.id === 'soft-skills-expert');
-                const model = expert?.model || 'gemini-1.5-flash';
+    const fetchScenario = useCallback(async (useFallbackDirectly: boolean = false) => {
+        setIsLoadingScenario(true);
+        setError('');
+        setUsedFallback(false);
+        setScenario('');
+        setQuestion('');
+        setUserAnswer('');
+        setFeedback('');
 
-                console.log('Generating skill scenario for:', skill.title[locale], 'with specialization:', specialization);
-                const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, apiKey);
+        // استخدام الـ fallback مباشرة إذا طُلب ذلك
+        if (useFallbackDirectly) {
+            const fallback = getFallbackScenario(skill.id, specialization);
+            if (fallback) {
+                setScenario(fallback.scenario);
+                setQuestion(fallback.question);
+                setUsedFallback(true);
+            } else {
+                setError(locale === 'ar' ? 'لا توجد سيناريوهات متاحة لهذه المهارة' : 'No scenarios available for this skill');
+            }
+            setIsLoadingScenario(false);
+            return;
+        }
+
+        try {
+            const apiKey = await getApiKey();
+            console.log('Generating skill scenario for:', skill.title[locale], 'with specialization:', specialization);
+
+            const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, apiKey);
+
+            if (result && result.scenario && result.question) {
                 setScenario(result.scenario);
                 setQuestion(result.question);
-            } catch (err: any) {
-                console.error('Error generating skill scenario:', err);
-                setError(err.message || t('skills.errorScenario'));
-            } finally {
-                setIsLoadingScenario(false);
+            } else {
+                // AI أرجع نتيجة غير صالحة، استخدم الـ fallback
+                const fallback = getFallbackScenario(skill.id, specialization);
+                if (fallback) {
+                    setScenario(fallback.scenario);
+                    setQuestion(fallback.question);
+                    setUsedFallback(true);
+                } else {
+                    setError(locale === 'ar' ? 'فشل في توليد السيناريو' : 'Failed to generate scenario');
+                }
             }
-        };
-        fetchScenario();
+        } catch (err: any) {
+            console.error('Error generating skill scenario:', err);
+            // محاولة استخدام الـ fallback
+            const fallback = getFallbackScenario(skill.id, specialization);
+            if (fallback) {
+                setScenario(fallback.scenario);
+                setQuestion(fallback.question);
+                setUsedFallback(true);
+                setError(''); // مسح الخطأ لأننا نستخدم الـ fallback
+            } else {
+                setError(err.message || t('skills.errorScenario'));
+            }
+        } finally {
+            setIsLoadingScenario(false);
+        }
     }, [skill, specialization, locale, t, getApiKey]);
+
+    useEffect(() => {
+        fetchScenario();
+    }, [fetchScenario]);
 
     const handleEvaluate = async () => {
         if (!userAnswer.trim()) return;
         setIsEvaluating(true);
         setError('');
         setFeedback('');
+
         try {
             const apiKey = await getApiKey();
-            const channels = await import('../../services/dataService').then(m => m.getChatChannels());
-            const expert = channels.find(c => c.id === 'soft-skills-expert');
-            const model = expert?.model || 'gemini-1.5-flash';
-
             const result = await evaluateSkillAnswer(skill.title[locale], `${scenario}\n${question}`, userAnswer, apiKey);
             setFeedback(result);
-        } catch (err) {
-            setError(t('texts.errorEval'));
+        } catch (err: any) {
+            console.error('Evaluation error:', err);
+            // استخدام تقييم بديل عند الفشل
+            const fallbackEval = getFallbackSkillEvaluation(skill.title[locale], userAnswer);
+            setFeedback(fallbackEval);
         } finally {
             setIsEvaluating(false);
         }
@@ -95,11 +137,41 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                 </div>
 
                 <div className="p-6 space-y-4 overflow-y-auto flex-1">
-                    {isLoadingScenario && <Spinner />}
-                    {error && !scenario && <p className="text-red-500 text-center">{error}</p>}
+                    {isLoadingScenario && (
+                        <div className="text-center py-8">
+                            <Spinner />
+                            <p className="mt-4 text-slate-500 dark:text-slate-400">
+                                {locale === 'ar' ? 'جاري إنشاء سيناريو التدريب...' : 'Generating training scenario...'}
+                            </p>
+                        </div>
+                    )}
+
+                    {error && !scenario && (
+                        <div className="text-center py-8">
+                            <p className="text-red-500 mb-4">{error}</p>
+                            <div className="flex gap-2 justify-center">
+                                <Button onClick={() => fetchScenario(false)} variant="secondary">
+                                    <ArrowPathIcon className="h-5 w-5 mx-1" />
+                                    {locale === 'ar' ? 'إعادة المحاولة' : 'Retry'}
+                                </Button>
+                                <Button onClick={() => fetchScenario(true)}>
+                                    <SparklesIcon className="h-5 w-5 mx-1" />
+                                    {locale === 'ar' ? 'استخدم سيناريو جاهز' : 'Use preset scenario'}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                     {scenario && (
                         <>
+                            {usedFallback && (
+                                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-300 text-sm">
+                                    {locale === 'ar'
+                                        ? '💡 تم استخدام سيناريو جاهز. يمكنك المحاولة لاحقاً للحصول على سيناريو مُخصص بالذكاء الاصطناعي.'
+                                        : '💡 Preset scenario used. You can try again later for an AI-generated scenario.'}
+                                </div>
+                            )}
+
                             <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                 <h4 className="font-bold text-primary-600 dark:text-primary-400 mb-2">{t('skills.scenario')}</h4>
                                 <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{scenario}</p>
@@ -149,6 +221,15 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                             >
                                 <SparklesIcon className="h-4 w-4" />
                                 {t('skills.consultExpert') || 'استشارة الخبير'}
+                            </button>
+                        )}
+                        {scenario && !feedback && (
+                            <button
+                                onClick={() => fetchScenario(false)}
+                                className="flex items-center gap-2 text-slate-600 hover:text-slate-700 font-medium text-sm px-3 py-1.5 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
+                            >
+                                <ArrowPathIcon className="h-4 w-4" />
+                                {locale === 'ar' ? 'سيناريو جديد' : 'New scenario'}
                             </button>
                         )}
                     </div>

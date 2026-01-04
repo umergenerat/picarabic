@@ -21,4 +21,3 @@ WHERE u.email = 'aitloutouaom@gmail.com';
 -- 1. If the user exists (should see 1 row)
 -- 2. If it is confirmed (email_confirmed_at should not be null)
 -- 3. If the role is 'authenticated' (auth_role)
--- 4. If the profile role is 'مدير' (profile_role)

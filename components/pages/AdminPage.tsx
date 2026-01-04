@@ -121,15 +121,14 @@ const UserEditForm: React.FC<{ user: PlatformUser; specializations: Specializati
                     </select>
                 </div>
                 <div>
-                    <label className={`block text-sm font-medium mb-1 ${formData.id ? 'text-slate-400' : ''}`}>كلمة المرور</label>
+                    <label className="block text-sm font-medium mb-1">كلمة المرور {formData.id && <span className="text-xs text-slate-500 font-normal">(اتركها فارغة للإبقاء على الحالية)</span>}</label>
                     <input
                         type="password"
                         value={formData.password || ''}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className={`w-full rounded-md border-slate-300 dark:bg-slate-700 ${formData.id ? 'bg-slate-100 cursor-not-allowed opacity-60' : ''}`}
-                        placeholder={formData.id ? "••••••••" : "أدخل كلمة مرور"}
+                        className="w-full rounded-md border-slate-300 dark:bg-slate-700"
+                        placeholder={formData.id ? "تعيين كلمة مرور جديدة" : "أدخل كلمة مرور"}
                         required={!formData.id}
-                        disabled={!!formData.id}
                     />
                     <div className="flex flex-col gap-1 mt-1">
                         <p className="text-[10px] text-slate-500">

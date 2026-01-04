@@ -184,15 +184,19 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
                 throw new Error(`فشل إنشاء ملف المستخدم: ${profileError.message}`);
             }
         } else {
-            // Case 2: Existing User - Update profile data
-            // Note: We don't update password here because client-side supabase.auth.updateUser 
-            // only works for the currently logged-in user.
+            // Case 2: Existing User - Update profile and password if provided
             if (user.password) {
-                console.warn("Attempted to update password for existing user. This is not supported through saveUser for security reasons.");
+                console.log("Updating password for existing user via Edge Function...");
+                try {
+                    await updateUserPassword(user.id, user.password);
+                } catch (passErr: any) {
+                    console.error("Password update failed:", passErr);
+                    throw new Error(`تم تحديث البيانات ولكن فشل تحديث كلمة المرور: ${passErr.message}`);
+                }
             }
 
             const { error } = await supabase.from('profiles').update({
-                name: user.name, // Added 'name' for compatibility
+                name: user.name,
                 display_name: user.name,
                 email: user.email,
                 phone: user.phone,
@@ -207,6 +211,23 @@ export const saveUser = async (user: PlatformUser): Promise<void> => {
     } catch (err: any) {
         console.error('Error in saveUser:', err);
         throw err;
+    }
+};
+
+export const updateUserPassword = async (userId: string, newPass: string): Promise<void> => {
+    if (!supabase) throw new Error("Service not available");
+
+    const { data, error } = await supabase.functions.invoke('admin-update-user', {
+        body: { userId, newPassword: newPass }
+    });
+
+    if (error) {
+        console.error("Edge Function Error:", error);
+        throw new Error(error.message || "فشلت عملية تحديث كلمة المرور");
+    }
+
+    if (data?.error) {
+        throw new Error(data.error);
     }
 };
 

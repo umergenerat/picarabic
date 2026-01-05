@@ -171,25 +171,25 @@ const PresentationsSection: React.FC<PresentationsSectionProps> = ({ teams, setT
                         icon={UserGroupIcon}
                         value={stats.total}
                         label={locale === 'ar' ? 'فريق عمل' : 'Teams'}
-                        colorClass="from-blue-500 to-blue-600"
+                        colorClass="from-slate-700 to-slate-800"
                     />
                     <StatCard
                         icon={CheckCircleIcon}
                         value={stats.submitted}
                         label={locale === 'ar' ? 'عرض مُسلّم' : 'Submitted'}
-                        colorClass="from-green-500 to-green-600"
+                        colorClass="from-emerald-500 to-emerald-600"
                     />
                     <StatCard
                         icon={ClockIcon}
                         value={stats.pending}
                         label={locale === 'ar' ? 'في الانتظار' : 'Pending'}
-                        colorClass="from-amber-500 to-amber-600"
+                        colorClass="from-teal-500 to-teal-600"
                     />
                     <StatCard
                         icon={UsersIcon}
                         value={stats.totalMembers}
                         label={locale === 'ar' ? 'متدرب مشارك' : 'Participants'}
-                        colorClass="from-purple-500 to-purple-600"
+                        colorClass="from-primary-600 to-primary-700"
                     />
                 </div>
             </div>

@@ -46,7 +46,7 @@ export const textToSpeech = async (text: string, apiKey?: string): Promise<strin
         console.log('TTS request for:', text.substring(0, 20) + '...');
         const response = await ai.models.generateContent({
             model: "gemini-1.5-flash",
-            contents: [{ parts: [{ text: `انطق النص التالي بوضوح وبلغة عربية فصحى: ${text}` }] }],
+            contents: [{ parts: [{ text: `انطق النص التالي بوضوح وبلغة عربية فصيحة: ${text}` }] }],
             config: {
                 responseModalities: [Modality.AUDIO],
                 speechConfig: {
@@ -219,7 +219,7 @@ export const evaluateAnswer = async (context: string, question: string, answer: 
             1. تحليل مدى دقة وموضوعية الإجابة بالنسبة للنص.
             2. تقديم تغذية راجعة بناءة (Constructive Feedback) تبدأ بنقاط القوة.
             3. إذا كانت الإجابة ناقصة، وجه المتدرب للمعلومة الصحيحة بذكاء دون إعطاء الحل المباشر.
-            4. استخدم لغة عربية فصحى، مهنية، ومشجعة جداً.
+            4. استخدم لغة عربية فصيحة، مهنية، ومشجعة جداً.
 
             السياق المرجعي: ${context}
             السؤال المنشود: ${question}
@@ -272,7 +272,7 @@ export const generateSkillScenario = async (
 ## السؤال:
 اختم بسؤال مفتوح يدفع المتدرب للتفكير في كيفية استخدام مهارة "${skillTitle}" لحل الموقف.
 
-اللغة: عربية فصحى مهنية وسلسة.`,
+اللغة: عربية فصيحة مهنية وسلسة.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: skillScenarioSchema

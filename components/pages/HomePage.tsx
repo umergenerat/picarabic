@@ -50,42 +50,36 @@ const HomePage: React.FC = () => {
                         icon={BookOpenIcon}
                         title={t('home.feature1Title')}
                         description={t('home.feature1Desc')}
-                        color="bg-blue-500"
                         delay={0}
                     />
                     <FeatureCard
                         icon={ChatBubbleLeftRightIcon}
                         title={t('chat.title')}
                         description={t('home.feature2Desc')}
-                        color="bg-teal-500"
                         delay={100}
                     />
                     <FeatureCard
                         icon={BeakerIcon}
                         title={t('home.feature3Title')}
                         description={t('home.feature3Desc')}
-                        color="bg-amber-500"
                         delay={200}
                     />
                     <FeatureCard
                         icon={PresentationChartBarIcon}
                         title={t('nav.presentations')}
                         description={t('presentations.title')}
-                        color="bg-indigo-500"
                         delay={300}
                     />
                     <FeatureCard
                         icon={SparklesIcon}
                         title={t('nav.skills')}
                         description={t('home.feature2Desc')}
-                        color="bg-pink-500"
                         delay={400}
                     />
                     <FeatureCard
                         icon={ChartPieIcon}
                         title={t('nav.dashboard')}
                         description={t('dashboard.progressChartTitle')}
-                        color="bg-emerald-500"
                         delay={500}
                     />
                 </div>
@@ -110,14 +104,13 @@ interface FeatureCardProps {
     icon: React.ComponentType<{ className?: string }>;
     title: string;
     description: string;
-    color: string;
     delay?: number;
 }
 
-const FeatureCard: React.FC<FeatureCardProps> = ({ icon: Icon, title, description, color, delay = 0 }) => (
+const FeatureCard: React.FC<FeatureCardProps> = ({ icon: Icon, title, description, delay = 0 }) => (
     <Card className="group p-8 transition-all hover:translate-y-[-8px] hover:shadow-glow h-full glass-panel border-transparent hover:border-primary-200/50">
         <div
-            className={`flex items-center justify-center h-16 w-16 rounded-2xl ${color} text-white shadow-lg mb-6 group-hover:rotate-6 group-hover:scale-110 transition-all duration-500 ease-out`}
+            className="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-primary-500 to-teal-600 text-white shadow-lg shadow-primary-500/20 mb-6 group-hover:rotate-6 group-hover:scale-110 transition-all duration-500 ease-out"
         >
             <Icon className="h-8 w-8" />
         </div>

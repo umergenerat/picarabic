@@ -14,6 +14,9 @@ export const STABLE_MODEL = "gemini-1.5-flash";
 export const INTELLIGENT_MODEL = "gemini-1.5-pro";
 export const LATEST_MODEL = "gemini-2.0-flash-exp";
 
+export const AUTH_ERROR_MESSAGE = "AUTH_ERROR: Invalid or missing API Key";
+export const QUOTA_ERROR_MESSAGE = "QUOTA_ERROR: Limit exceeded";
+
 // Utilities for Audio Decoding
 export const decodeBase64 = (base64: string) => {
     const binaryString = atob(base64);
@@ -44,6 +47,20 @@ export const decodeAudioData = async (
     return buffer;
 };
 
+const classifyAiError = (error: any): Error => {
+    const msg = error.message || '';
+    if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
+        return new Error(AUTH_ERROR_MESSAGE);
+    }
+    if (msg.includes('quota') || msg.includes('429')) {
+        return new Error(QUOTA_ERROR_MESSAGE);
+    }
+    if (msg.includes('network') || msg.includes('fetch')) {
+        return new Error("خطأ في الاتصال بالشبكة. يرجى التأكد من اتصالك بالإنترنت أو صحة مفتاح API.");
+    }
+    return new Error(msg || "عذراً، فشل الاتصال بخدمة الذكاء الاصطناعي.");
+};
+
 export const textToSpeech = async (text: string, apiKey?: string): Promise<string> => {
     try {
         const ai = getAiClient(apiKey);
@@ -66,7 +83,7 @@ export const textToSpeech = async (text: string, apiKey?: string): Promise<strin
         return base64Audio;
     } catch (error: any) {
         console.error("Error generating speech:", error);
-        throw new Error(error.message || "فشل في توليد الصوت.");
+        throw classifyAiError(error);
     }
 };
 
@@ -131,29 +148,19 @@ const runAiTask = async (
             console.error(`AI Task Failure [${description}] (Attempt ${attempt}/${maxRetries}):`, error.message);
 
             // Don't retry for specific errors
-            if (error.message?.includes('API key') || error.message?.includes('quota') || error.message?.includes('429')) {
+            if (error.message?.includes('API key') || error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('401')) {
                 break;
             }
 
-            // Wait before retrying with exponential backoff
+            // Wait before retrying
             if (attempt < maxRetries) {
-                const waitTime = attempt * 1500; // 1.5s, 3s, etc.
-                console.log(`Retrying in ${waitTime}ms...`);
+                const waitTime = attempt * 1500;
                 await delay(waitTime);
             }
         }
     }
 
-    // Sanitize error messages for the user
-    if (lastError?.message?.includes('API key')) {
-        throw new Error("تنبيه: مفتاح الذكاء الاصطناعي غير صالح. يرجى التحقق من الإعدادات.");
-    } else if (lastError?.message?.includes('quota') || lastError?.message?.includes('429')) {
-        throw new Error("عذراً، تم الوصول للحد الأقصى للطلبات حالياً. يرجى المحاولة بعد قليل.");
-    } else if (lastError?.message?.includes('network') || lastError?.message?.includes('fetch')) {
-        throw new Error("خطأ في الاتصال بالشبكة. يرجى التأكد من اتصالك بالإنترنت.");
-    }
-
-    throw new Error("عذراً، فشل الاتصال بخدمة الذكاء الاصطناعي. يمكنك استخدام المحتوى البديل.");
+    throw classifyAiError(lastError);
 };
 
 /**
@@ -195,7 +202,7 @@ export const streamChatMessage = async (
         return fullText;
     } catch (error: any) {
         console.error("Streaming chat error:", error);
-        throw error;
+        throw classifyAiError(error);
     }
 };
 

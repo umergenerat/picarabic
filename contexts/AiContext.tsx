@@ -1,15 +1,18 @@
 
 import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
-import { generateQuiz as aiGenerateQuiz } from '../services/geminiService';
+import { generateQuiz as aiGenerateQuiz, AUTH_ERROR_MESSAGE, QUOTA_ERROR_MESSAGE } from '../services/geminiService';
 import { Question } from '../types';
+import { useI18n } from './I18nContext';
 
 interface AiContextType {
     apiKey: string | null;
     getApiKey: () => Promise<string>;
     setApiKey: (key: string) => void;
     clearApiKey: () => void;
+    handleAiError: (error: any) => Promise<boolean>;
     isModalOpen: boolean;
     closeModal: () => void;
+    openModal: () => void;
     generateQuiz: (contextOrObj: any) => Promise<Question[]>;
     isLoading: boolean;
     error: string | null;
@@ -22,6 +25,7 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { t } = useI18n();
 
     // Resolve/Reject queue for pending API key requests
     const pendingRequests = useRef<{ resolve: (value: string) => void, reject: (reason?: any) => void }[]>([]);
@@ -39,6 +43,8 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         localStorage.removeItem('VITE_GEMINI_API_KEY');
         _setApiKey(null);
     }, []);
+
+    const openModal = useCallback(() => setIsModalOpen(true), []);
 
     const getApiKey = useCallback((): Promise<string> => {
         if (apiKey) return Promise.resolve(apiKey);
@@ -59,52 +65,79 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         pendingRequests.current = [];
     }, []);
 
+    const translateAiError = useCallback((err: any): string => {
+        if (err.message === AUTH_ERROR_MESSAGE) return t('chat.apiKeyInvalid');
+        if (err.message === QUOTA_ERROR_MESSAGE) return t('chat.quotaExceeded');
+        return err.message;
+    }, [t]);
+
+    const handleAiError = useCallback(async (err: any): Promise<boolean> => {
+        if (err.message === AUTH_ERROR_MESSAGE) {
+            clearApiKey();
+            setIsModalOpen(true);
+            return true;
+        }
+        return false;
+    }, [clearApiKey]);
+
     const generateQuiz = useCallback(async (context: any): Promise<Question[]> => {
         setIsLoading(true);
         setError(null);
-        try {
-            const currentApiKey = await getApiKey();
 
-            // Convert context object to string if needed
-            let contextStr = "";
-            if (typeof context === 'string') {
-                contextStr = context;
-            } else if (context && typeof context === 'object') {
-                if (context.type === 'general') {
-                    contextStr = "اختبار عام وشامل لمستوى متدربي التكنولوجيا التطبيقية في مهارات التواصل باللغة العربية";
-                } else if (context.type === 'text') {
-                    contextStr = `اختبار بناء على نص تعليمي: ${context.textTitle || ''}`;
-                } else if (context.type === 'skill') {
-                    contextStr = `اختبار بناء على مهارة: ${context.skillTitle || ''}`;
-                } else {
-                    contextStr = JSON.stringify(context);
-                }
+        // Prepare context object to string
+        let contextStr = "";
+        if (typeof context === 'string') {
+            contextStr = context;
+        } else if (context && typeof context === 'object') {
+            if (context.type === 'general') {
+                contextStr = "اختبار عام وشامل لمستوى متدربي التكنولوجيا التطبيقية في مهارات التواصل باللغة العربية";
+            } else if (context.type === 'text') {
+                contextStr = `اختبار بناء على نص تعليمي: ${context.textTitle || ''}\nالأهداف: ${(context.objectives || []).join(', ')}`;
+            } else if (context.type === 'skill') {
+                contextStr = `اختبار لمهارة: ${context.skillTitle || ''}\nالوصف: ${context.description || ''}`;
+            } else {
+                contextStr = JSON.stringify(context);
             }
+        }
 
-            const questions = await aiGenerateQuiz(contextStr, currentApiKey);
-            // Map QuizQuestion (service type) to Question (app type)
+        const executeGeneration = async (key: string) => {
+            const questions = await aiGenerateQuiz(contextStr, key);
             return questions.map((q: any, idx: number) => ({
                 id: `q-${Date.now()}-${idx}`,
                 text: { ar: q.question, fr: q.question },
-                type: 'فهم',
+                type: 'فهم' as any,
                 options: q.options.map((opt: string, optIdx: number) => ({
                     id: `opt-${optIdx}`,
                     text: { ar: opt, fr: opt }
                 })),
                 correctAnswerId: `opt-${q.options.indexOf(q.correctAnswer)}`
             }));
+        };
+
+        try {
+            const currentApiKey = await getApiKey();
+            try {
+                return await executeGeneration(currentApiKey);
+            } catch (innerErr: any) {
+                if (innerErr.message === AUTH_ERROR_MESSAGE) {
+                    clearApiKey();
+                    const newKey = await getApiKey(); // This will re-trigger the modal and wait
+                    return await executeGeneration(newKey);
+                }
+                throw innerErr;
+            }
         } catch (err: any) {
-            const msg = err.message || 'Error generating quiz';
+            const msg = translateAiError(err);
             setError(msg);
             throw err;
         } finally {
             setIsLoading(false);
         }
-    }, [getApiKey]);
+    }, [getApiKey, translateAiError, clearApiKey]);
 
     return (
         <AiContext.Provider value={{
-            apiKey, getApiKey, setApiKey, clearApiKey, isModalOpen, closeModal,
+            apiKey, getApiKey, setApiKey, clearApiKey, handleAiError, isModalOpen, closeModal, openModal,
             generateQuiz, isLoading, error
         }}>
             {children}

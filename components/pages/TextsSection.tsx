@@ -27,7 +27,7 @@ const DifficultyBadge: React.FC<{ level: DifficultyLevel }> = ({ level }) => {
 // Extracted Detail View Component
 const TextDetailView: React.FC<{ text: TextData; skills: Skill[] }> = ({ text, skills }) => {
     const { t, locale } = useI18n();
-    const { getApiKey } = useAi();
+    const { getApiKey, clearApiKey } = useAi();
     const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
     const [userAnswer, setUserAnswer] = useState('');
     const [feedback, setFeedback] = useState('');
@@ -62,20 +62,34 @@ const TextDetailView: React.FC<{ text: TextData; skills: Skill[] }> = ({ text, s
 
         setIsSpeaking(true);
         try {
-            const apiKey = await getApiKey();
-            const base64Audio = await textToSpeech(textToSpeak, apiKey);
-            if (!audioContextRef.current) {
-                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-            }
-            const audioData = decodeBase64(base64Audio);
-            const audioBuffer = await decodeAudioData(audioData, audioContextRef.current);
+            const executeAndPlay = async (key: string) => {
+                const base64Audio = await textToSpeech(textToSpeak, key);
+                if (!audioContextRef.current) {
+                    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+                }
+                const audioData = decodeBase64(base64Audio);
+                const audioBuffer = await decodeAudioData(audioData, audioContextRef.current);
 
-            const source = audioContextRef.current.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(audioContextRef.current.destination);
-            source.onended = () => setIsSpeaking(false);
-            source.start();
-            currentSourceRef.current = source;
+                const source = audioContextRef.current.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioContextRef.current.destination);
+                source.onended = () => setIsSpeaking(false);
+                source.start();
+                currentSourceRef.current = source;
+            };
+
+            const apiKey = await getApiKey();
+            try {
+                await executeAndPlay(apiKey);
+            } catch (innerErr: any) {
+                if (innerErr.message.includes('AUTH_ERROR')) {
+                    clearApiKey();
+                    const newKey = await getApiKey();
+                    await executeAndPlay(newKey);
+                } else {
+                    throw innerErr;
+                }
+            }
         } catch (err: any) {
             console.error("Audio error:", err);
             setError(t('texts.errorAudio'));
@@ -103,9 +117,23 @@ const TextDetailView: React.FC<{ text: TextData; skills: Skill[] }> = ({ text, s
             setError('');
             setFeedback('');
             try {
+                const execute = async (key: string) => {
+                    const result = await evaluateAnswer(text.content[locale], selectedQuestion.text[locale], userAnswer.trim(), key);
+                    setFeedback(result);
+                };
+
                 const apiKey = await getApiKey();
-                const result = await evaluateAnswer(text.content[locale], selectedQuestion.text[locale], userAnswer.trim(), apiKey);
-                setFeedback(result);
+                try {
+                    await execute(apiKey);
+                } catch (innerErr: any) {
+                    if (innerErr.message.includes('AUTH_ERROR')) {
+                        clearApiKey();
+                        const newKey = await getApiKey();
+                        await execute(newKey);
+                    } else {
+                        throw innerErr;
+                    }
+                }
             } catch (err: any) {
                 setError(err.message || t('texts.errorEval'));
             } finally {

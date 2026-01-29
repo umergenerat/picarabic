@@ -753,7 +753,7 @@ const TeamEditForm: React.FC<{ team: Team; specializations: Specialization[]; us
 
 const AdminPage: React.FC<any> = (props) => {
     const { t, locale } = useI18n();
-    const { getApiKey } = useAi();
+    const { getApiKey, clearApiKey } = useAi();
     const [activeTab, setActiveTab] = useState<AdminTab>('content');
     const [activeContentType, setActiveContentType] = useState<'texts' | 'skills' | 'specializations' | 'chat-channels' | 'teams'>('texts');
     const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -865,8 +865,23 @@ const AdminPage: React.FC<any> = (props) => {
                     } else {
                         // AI Extraction
                         const base64 = content.split(',')[1] || content;
-                        const key = await getApiKey();
-                        trainees = await aiService.extractTraineesFromDocument(base64, file.type, key);
+
+                        const executeExtraction = async (key: string) => {
+                            return await aiService.extractTraineesFromDocument(base64, file.type, key);
+                        };
+
+                        const currentApiKey = await getApiKey();
+                        try {
+                            trainees = await executeExtraction(currentApiKey);
+                        } catch (innerErr: any) {
+                            if (innerErr.message.includes('AUTH_ERROR')) {
+                                clearApiKey();
+                                const newKey = await getApiKey();
+                                trainees = await executeExtraction(newKey);
+                            } else {
+                                throw innerErr;
+                            }
+                        }
                     }
 
                     if (trainees && trainees.length > 0) {

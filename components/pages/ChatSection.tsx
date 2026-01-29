@@ -97,7 +97,7 @@ interface ChatSectionProps {
 
 const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatChannels, initialChannelId }) => {
     const { t, locale } = useI18n();
-    const { getApiKey } = useAi();
+    const { getApiKey, handleAiError, clearApiKey } = useAi();
     const [activeChannelId, setActiveChannelId] = useState<string | null>(initialChannelId || (chatChannels.length > 0 ? chatChannels[0].id : null));
     const activeChannel = chatChannels.find(c => c.id === activeChannelId) || null;
 
@@ -151,20 +151,34 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         setSpeakingId(message.id);
 
         try {
-            const apiKey = await getApiKey();
-            const base64Audio = await textToSpeech(message.text, apiKey);
-            if (!audioContextRef.current) {
-                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-            }
-            const audioData = decodeBase64(base64Audio);
-            const audioBuffer = await decodeAudioData(audioData, audioContextRef.current);
+            const executeAndPlay = async (key: string) => {
+                const base64Audio = await textToSpeech(message.text, key);
+                if (!audioContextRef.current) {
+                    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+                }
+                const audioData = decodeBase64(base64Audio);
+                const audioBuffer = await decodeAudioData(audioData, audioContextRef.current);
 
-            const source = audioContextRef.current.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(audioContextRef.current.destination);
-            source.onended = () => setSpeakingId(null);
-            source.start();
-            currentSourceRef.current = source;
+                const source = audioContextRef.current.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioContextRef.current.destination);
+                source.onended = () => setSpeakingId(null);
+                source.start();
+                currentSourceRef.current = source;
+            };
+
+            const apiKey = await getApiKey();
+            try {
+                await executeAndPlay(apiKey);
+            } catch (innerErr: any) {
+                if (innerErr.message.includes('AUTH_ERROR')) {
+                    clearApiKey();
+                    const newKey = await getApiKey();
+                    await executeAndPlay(newKey);
+                } else {
+                    throw innerErr;
+                }
+            }
         } catch (err) {
             console.error("Audio error:", err);
             setSpeakingId(null);
@@ -235,36 +249,52 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         setAiMessages(prev => [...prev, initialAiMsg]);
 
         try {
+            const executeChat = async (key: string) => {
+                // Format history for Gemini
+                const history = aiMessages.slice(-10).map(m => ({
+                    role: (m.user === user.displayName ? 'user' : 'model') as 'user' | 'model',
+                    parts: [{ text: m.text }]
+                }));
+
+                let fullText = "";
+                await streamChatMessage(
+                    userMsg.text,
+                    history,
+                    activeChannel.systemPrompt[locale],
+                    activeChannel.model || STABLE_MODEL,
+                    key,
+                    (chunk) => {
+                        setIsAiThinking(false);
+                        fullText += chunk;
+                        setAiMessages(prev => prev.map(m =>
+                            m.id === aiMsgId ? { ...m, text: fullText } : m
+                        ));
+                    }
+                );
+            };
+
             const apiKey = await getApiKey();
-
-            // Format history for Gemini
-            // We take last 10 messages for context
-            const history = aiMessages.slice(-10).map(m => ({
-                role: (m.user === user.displayName ? 'user' : 'model') as 'user' | 'model',
-                parts: [{ text: m.text }]
-            }));
-
-            let fullText = "";
-            await streamChatMessage(
-                userMsg.text,
-                history,
-                activeChannel.systemPrompt[locale],
-                activeChannel.model || STABLE_MODEL,
-                apiKey,
-                (chunk) => {
-                    setIsAiThinking(false);
-                    fullText += chunk;
-                    setAiMessages(prev => prev.map(m =>
-                        m.id === aiMsgId ? { ...m, text: fullText } : m
-                    ));
+            try {
+                await executeChat(apiKey);
+            } catch (innerErr: any) {
+                if (innerErr.message.includes('AUTH_ERROR')) {
+                    clearApiKey();
+                    const newKey = await getApiKey();
+                    await executeChat(newKey);
+                } else {
+                    throw innerErr;
                 }
-            );
-
+            }
         } catch (error: any) {
             console.error("Chat error:", error);
             setIsAiThinking(false);
+
+            const errorMsg = error.message?.includes('QUOTA_ERROR')
+                ? t('chat.quotaExceeded') || 'عذراً، تم تجاوز حصة الاستخدام المتاحة.'
+                : t('chat.aiError');
+
             setAiMessages(prev => prev.map(m =>
-                m.id === aiMsgId ? { ...m, text: t('chat.aiError') } : m
+                m.id === aiMsgId ? { ...m, text: errorMsg } : m
             ));
         }
     };

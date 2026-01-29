@@ -19,7 +19,7 @@ interface SkillPracticeModalProps {
 
 const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, specialization, onClose, onComplete, onConsultExpert }) => {
     const { t, locale } = useI18n();
-    const { getApiKey } = useAi();
+    const { getApiKey, handleAiError, clearApiKey } = useAi();
     const [scenario, setScenario] = useState('');
     const [question, setQuestion] = useState('');
     const [userAnswer, setUserAnswer] = useState('');
@@ -53,23 +53,26 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
         }
 
         try {
-            const apiKey = await getApiKey();
-            console.log('Generating skill scenario for:', skill.title[locale], 'with specialization:', specialization);
-
-            const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, apiKey);
-
-            if (result && result.scenario && result.question) {
-                setScenario(result.scenario);
-                setQuestion(result.question);
-            } else {
-                // AI أرجع نتيجة غير صالحة، استخدم الـ fallback
-                const fallback = getFallbackScenario(skill.id, specialization);
-                if (fallback) {
-                    setScenario(fallback.scenario);
-                    setQuestion(fallback.question);
-                    setUsedFallback(true);
+            const execute = async (key: string) => {
+                const result = await generateSkillScenario(skill.title[locale], skill.description[locale], specialization, key);
+                if (result && result.scenario && result.question) {
+                    setScenario(result.scenario);
+                    setQuestion(result.question);
                 } else {
-                    setError(locale === 'ar' ? 'فشل في توليد السيناريو' : 'Failed to generate scenario');
+                    throw new Error("Invalid scenario data");
+                }
+            };
+
+            const apiKey = await getApiKey();
+            try {
+                await execute(apiKey);
+            } catch (innerErr: any) {
+                if (innerErr.message.includes('AUTH_ERROR')) {
+                    clearApiKey();
+                    const newKey = await getApiKey();
+                    await execute(newKey);
+                } else {
+                    throw innerErr;
                 }
             }
         } catch (err: any) {
@@ -100,9 +103,23 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
         setFeedback('');
 
         try {
+            const execute = async (key: string) => {
+                const result = await evaluateSkillAnswer(skill.title[locale], `${scenario}\n${question}`, userAnswer, key);
+                setFeedback(result);
+            };
+
             const apiKey = await getApiKey();
-            const result = await evaluateSkillAnswer(skill.title[locale], `${scenario}\n${question}`, userAnswer, apiKey);
-            setFeedback(result);
+            try {
+                await execute(apiKey);
+            } catch (innerErr: any) {
+                if (innerErr.message.includes('AUTH_ERROR')) {
+                    clearApiKey();
+                    const newKey = await getApiKey();
+                    await execute(newKey);
+                } else {
+                    throw innerErr;
+                }
+            }
         } catch (err: any) {
             console.error('Evaluation error:', err);
             // استخدام تقييم بديل عند الفشل

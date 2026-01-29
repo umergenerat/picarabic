@@ -92,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, isAdmin, l
                 </div>
 
                 {/* Navigation Items */}
-                <nav className="flex-1 space-y-1 px-2 overflow-y-auto scrollbar-hide py-4">
+                <nav className="flex-1 space-y-1 px-2 overflow-y-auto py-4">
                     {visibleNavItems.map(item => (
                         <NavLink
                             key={item.id}

@@ -81,7 +81,7 @@ const Drawer: React.FC<DrawerProps> = ({
                 </div>
 
                 {/* Body */}
-                <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                <div className="flex-1 overflow-y-auto p-6">
                     {children}
                 </div>
             </div>

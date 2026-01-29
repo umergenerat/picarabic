@@ -72,14 +72,16 @@ const MultilingualInput: React.FC<{ label: string; value: MultilingualString; na
                     value={value.ar}
                     onChange={(e: any) => onChange(e, 'ar')}
                     placeholder="العربية (إلزامي)"
-                    className="block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm"
+                    className={`block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm focus:ring-2 focus:ring-primary-500 transition-all ${type === 'textarea' ? 'min-h-[120px] p-3' : 'p-2'}`}
                     required
+                    rows={type === 'textarea' ? 5 : undefined}
                 />
                 <Component
                     value={value.fr}
                     onChange={(e: any) => onChange(e, 'fr')}
                     placeholder="Français (اختياري)"
-                    className="block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm"
+                    className={`block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm focus:ring-2 focus:ring-primary-500 transition-all ${type === 'textarea' ? 'min-h-[120px] p-3' : 'p-2'}`}
+                    rows={type === 'textarea' ? 5 : undefined}
                 />
             </div>
         </div>

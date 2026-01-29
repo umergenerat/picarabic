@@ -401,18 +401,31 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
 
                     <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20">
                         {user ? (
-                            <form onSubmit={handleSendMessage} className="flex gap-2 max-w-4xl mx-auto">
-                                <input
-                                    type="text"
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    placeholder={t('chat.messagePlaceholder')}
-                                    className="flex-1 p-3 border border-slate-300 rounded-xl dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 shadow-inner outline-none transition-all"
-                                />
+                            <form onSubmit={handleSendMessage} className="flex gap-2 max-w-4xl mx-auto items-end">
+                                <div className="flex-1 relative">
+                                    <textarea
+                                        value={newMessage}
+                                        onChange={(e) => {
+                                            setNewMessage(e.target.value);
+                                            // Reset height to auto to recalculate
+                                            e.target.style.height = 'auto';
+                                            e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendMessage(e as any);
+                                            }
+                                        }}
+                                        placeholder={t('chat.messagePlaceholder')}
+                                        rows={1}
+                                        className="w-full p-3 border border-slate-300 rounded-xl dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 shadow-inner outline-none transition-all resize-none min-h-[48px] max-h-[200px]"
+                                    />
+                                </div>
                                 <button
                                     type="submit"
                                     disabled={!newMessage.trim() || isAiThinking}
-                                    className="px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
+                                    className="px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 h-[48px] flex items-center justify-center"
                                 >
                                     {t('chat.send')}
                                 </button>

@@ -280,7 +280,7 @@ const App: React.FC = () => {
             case 'presentations':
                 return withLoader(<PresentationsSection teams={teams} setTeams={setTeams} user={user} isAdmin={isAdmin} />, teams.length > 0);
             case 'tests':
-                return user ? withLoader(<TestsSection testContexts={testContexts} />, testContexts.length > 0) : <LoginRequired onLogin={handleOpenLoginModal} />;
+                return user ? withLoader(<TestsSection texts={texts} skills={skills} />, texts.length > 0 && skills.length > 0) : <LoginRequired onLogin={handleOpenLoginModal} />;
             case 'chat':
                 return withLoader(<ChatSection user={user} chatChannels={chatChannels} setChatChannels={setChatChannels} />, chatChannels.length > 0);
             case 'resources':

@@ -18,7 +18,7 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
     const { generateQuiz, isLoading: isAiLoading, error: aiError } = useAi();
 
     const [activeTab, setActiveTab] = useState<'generate' | 'history'>('generate');
-    const [selectedContext, setSelectedContext] = useState<TestContext>({ type: 'general' });
+    const [selectedContext, setSelectedContext] = useState<any>({ type: 'general' });
     const [currentQuiz, setCurrentQuiz] = useState<Question[] | null>(null);
     const [userAnswers, setUserAnswers] = useState<{ [questionId: string]: string }>({});
     const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
@@ -46,21 +46,23 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
         setTimer(0);
 
         try {
-            // If specific text selected, pass its learning objectives
-            let objectives: string[] = [];
+            // Prepare context with readable titles for AI
+            const contextForAi = { ...selectedContext };
             if (selectedContext.type === 'text' && selectedContext.textId) {
                 const text = texts.find(t => t.id === selectedContext.textId);
                 if (text) {
-                    objectives = text.learningObjectives.map(obj => obj[locale] || obj.ar);
+                    contextForAi.textTitle = text.title[locale] || text.title.ar;
+                    contextForAi.objectives = text.learningObjectives.map(obj => obj[locale] || obj.ar);
                 }
             } else if (selectedContext.type === 'skill' && selectedContext.skillId) {
                 const skill = skills.find(s => s.id === selectedContext.skillId);
                 if (skill) {
-                    objectives = [skill.description[locale] || skill.description.ar];
+                    contextForAi.skillTitle = skill.title[locale] || skill.title.ar;
+                    contextForAi.description = skill.description[locale] || skill.description.ar;
                 }
             }
 
-            const questions = await generateQuiz(selectedContext);
+            const questions = await generateQuiz(contextForAi);
             if (questions && questions.length > 0) {
                 setCurrentQuiz(questions);
                 setIsQuizActive(true);
@@ -127,8 +129,8 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
                 <button
                     onClick={() => setActiveTab('generate')}
                     className={`pb-4 px-6 text-sm font-bold uppercase tracking-wider transition-all relative ${activeTab === 'generate'
-                            ? 'text-primary-600'
-                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'
+                        ? 'text-primary-600'
+                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'
                         }`}
                 >
                     {t('tests.newTest')}
@@ -139,8 +141,8 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
                 <button
                     onClick={() => setActiveTab('history')}
                     className={`pb-4 px-6 text-sm font-bold uppercase tracking-wider transition-all relative ${activeTab === 'history'
-                            ? 'text-primary-600'
-                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'
+                        ? 'text-primary-600'
+                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'
                         }`}
                 >
                     {t('tests.history')}
@@ -161,27 +163,29 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                                        نوع الاختبار
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">
+                                        {t('tests.typeLabel')}
                                     </label>
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         {[
-                                            { id: 'general', label: 'اختبار عام (شامل)', icon: SparklesIcon },
-                                            { id: 'text', label: 'بناءً على نص محدد', icon: AcademicCapIcon },
-                                            { id: 'skill', label: 'بناءً على مهارة معينة', icon: CheckCircleIcon }
+                                            { id: 'general', label: t('tests.general'), icon: SparklesIcon },
+                                            { id: 'text', label: t('tests.basedOnText'), icon: AcademicCapIcon },
+                                            { id: 'skill', label: t('tests.basedOnSkill'), icon: CheckCircleIcon }
                                         ].map((type) => (
                                             <div
                                                 key={type.id}
-                                                onClick={() => setSelectedContext({ ...selectedContext, type: type.id as any })}
-                                                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedContext.type === type.id
-                                                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 shadow-sm ring-1 ring-primary-500'
-                                                        : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                                onClick={() => setSelectedContext({ type: type.id })}
+                                                className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${selectedContext.type === type.id
+                                                    ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-900/20 shadow-glow ring-4 ring-primary-500/10'
+                                                    : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/30'
                                                     }`}
                                             >
-                                                <div className={`p-2 rounded-lg ${selectedContext.type === type.id ? 'bg-white dark:bg-slate-800' : 'bg-slate-100 dark:bg-slate-900'}`}>
-                                                    <type.icon className="h-5 w-5" />
+                                                <div className={`p-3 rounded-xl transition-colors ${selectedContext.type === type.id ? 'bg-primary-500 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                                    <type.icon className="h-6 w-6" />
                                                 </div>
-                                                <span className="font-medium">{type.label}</span>
+                                                <span className={`font-bold text-base ${selectedContext.type === type.id ? 'text-primary-700 dark:text-primary-300' : 'text-slate-600 dark:text-slate-400'}`}>
+                                                    {type.label}
+                                                </span>
                                             </div>
                                         ))}
                                     </div>
@@ -189,13 +193,14 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
 
                                 <div className="space-y-4">
                                     {selectedContext.type === 'text' && (
-                                        <div className="animate-fade-in">
-                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">اختر النص</label>
+                                        <div className="animate-slide-in-right">
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">{t('tests.selectText')}</label>
                                             <select
-                                                className="w-full p-3 rounded-xl border-slate-300 dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 transition-shadow"
+                                                className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:bg-slate-800 dark:border-slate-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-bold text-slate-700 dark:text-slate-200"
                                                 onChange={(e) => setSelectedContext({ ...selectedContext, textId: e.target.value })}
+                                                value={selectedContext.textId || ''}
                                             >
-                                                <option value="">-- اختر نصاً --</option>
+                                                <option value="">-- {t('tests.selectText')} --</option>
                                                 {texts.map(t => (
                                                     <option key={t.id} value={t.id}>{t.title[locale]}</option>
                                                 ))}
@@ -204,13 +209,14 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
                                     )}
 
                                     {selectedContext.type === 'skill' && (
-                                        <div className="animate-fade-in">
-                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">اختر المهارة</label>
+                                        <div className="animate-slide-in-right">
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">{t('tests.selectSkill')}</label>
                                             <select
-                                                className="w-full p-3 rounded-xl border-slate-300 dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 transition-shadow"
+                                                className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:bg-slate-800 dark:border-slate-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-bold text-slate-700 dark:text-slate-200"
                                                 onChange={(e) => setSelectedContext({ ...selectedContext, skillId: Number(e.target.value) })}
+                                                value={selectedContext.skillId || ''}
                                             >
-                                                <option value="">-- اختر مهارة --</option>
+                                                <option value="">-- {t('tests.selectSkill')} --</option>
                                                 {skills.map(s => (
                                                     <option key={s.id} value={s.id}>{s.title[locale]}</option>
                                                 ))}
@@ -218,13 +224,15 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
                                         </div>
                                     )}
 
-                                    <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
-                                        <div className="flex gap-2 text-amber-600 dark:text-amber-400 mb-2">
-                                            <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0" />
-                                            <span className="text-sm font-bold">ملاحظة هامة</span>
+                                    <div className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                                        <div className="flex gap-3 text-amber-600 dark:text-amber-400 mb-3">
+                                            <div className="p-1.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                                                <ExclamationTriangleIcon className="h-5 w-5" />
+                                            </div>
+                                            <span className="text-sm font-black mt-1">{t('tests.importantNote')}</span>
                                         </div>
-                                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                            يتم إنشاء الأسئلة باستخدام الذكاء الاصطناعي بناءً على السياق المختار. قد تستغرق العملية بضع ثوانٍ.
+                                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                                            {t('tests.aiNote')}
                                         </p>
                                     </div>
                                 </div>
@@ -233,11 +241,15 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
                             <Button
                                 onClick={handleGenerateQuiz}
                                 isLoading={isAiLoading}
+                                disabled={
+                                    (selectedContext.type === 'text' && !selectedContext.textId) ||
+                                    (selectedContext.type === 'skill' && !selectedContext.skillId)
+                                }
                                 fullWidth
                                 size="lg"
-                                className="shadow-lg shadow-primary-500/20"
+                                className="shadow-2xl shadow-primary-500/30 py-4 h-16 text-lg tracking-wide rounded-[2rem]"
                             >
-                                <SparklesIcon className="h-5 w-5 mx-2" />
+                                <SparklesIcon className="h-6 w-6 mx-3 animate-pulse" />
                                 {t('tests.startTest')}
                             </Button>
 
@@ -279,8 +291,8 @@ const TestsSection: React.FC<TestsSectionProps> = ({ texts, skills }) => {
                                                                     <label
                                                                         key={option.id}
                                                                         className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${userAnswers[question.id] === option.id
-                                                                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-md transform scale-[1.01]'
-                                                                                : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300'
+                                                                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-md transform scale-[1.01]'
+                                                                            : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300'
                                                                             }`}
                                                                     >
                                                                         <input

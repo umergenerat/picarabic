@@ -62,7 +62,8 @@ const Drawer: React.FC<DrawerProps> = ({
 
             {/* Panel */}
             <div
-                className={`flex flex-col w-full bg-white dark:bg-slate-900 shadow-2xl ring-1 ring-slate-900/10 transform transition-transform duration-300 ease-in-out absolute h-full ${sideClass} ${sizeClasses[size]} ${translateClass} ${className}`}
+                className={`flex flex-col w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl shadow-[0_20px_70px_-10px_rgba(0,0,0,0.3)] ring-1 ring-slate-900/5 transform transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) absolute h-full ${sideClass} ${sizeClasses[size]} ${translateClass} ${className}`}
+                style={{ transitionProperty: 'transform, opacity' }}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-10">

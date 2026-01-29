@@ -1,14 +1,18 @@
 
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, SchemaType } from "@google/generative-ai";
 import { QuizQuestion } from '../types';
 
-const getAiClient = (apiKey?: string) => {
+export const getAiClient = (apiKey?: string) => {
     const API_KEY = apiKey || import.meta.env.VITE_GEMINI_API_KEY;
     if (!API_KEY) {
         throw new Error("No API key provided. AI features are unavailable.");
     }
-    return new GoogleGenAI({ apiKey: API_KEY });
+    return new GoogleGenerativeAI(API_KEY);
 };
+
+export const STABLE_MODEL = "gemini-1.5-flash";
+export const INTELLIGENT_MODEL = "gemini-1.5-pro";
+export const LATEST_MODEL = "gemini-2.0-flash-exp";
 
 // Utilities for Audio Decoding
 export const decodeBase64 = (base64: string) => {
@@ -43,20 +47,21 @@ export const decodeAudioData = async (
 export const textToSpeech = async (text: string, apiKey?: string): Promise<string> => {
     try {
         const ai = getAiClient(apiKey);
+        const model = ai.getGenerativeModel({ model: LATEST_MODEL });
         console.log('TTS request for:', text.substring(0, 20) + '...');
-        const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
-            contents: [{ parts: [{ text: `انطق النص التالي بوضوح وبلغة عربية فصيحة: ${text}` }] }],
-            config: {
-                responseModalities: [Modality.AUDIO],
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: `انطق النص التالي بوضوح وبلغة عربية فصيحة: ${text}` }] }],
+            generationConfig: {
+                responseModalities: ["audio"],
                 speechConfig: {
                     voiceConfig: {
                         prebuiltVoiceConfig: { voiceName: 'Kore' },
                     },
                 },
-            },
+            } as any,
         });
-        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        const responseData = result.response;
+        const base64Audio = responseData.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!base64Audio) throw new Error("No audio data returned from Gemini TTS");
         return base64Audio;
     } catch (error: any) {
@@ -66,33 +71,29 @@ export const textToSpeech = async (text: string, apiKey?: string): Promise<strin
 };
 
 const questionGenerationSchema = {
-    type: Type.ARRAY,
+    type: SchemaType.ARRAY,
     items: {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: {
             question: {
-                type: Type.STRING,
+                type: SchemaType.STRING,
                 description: "نص السؤال"
             },
             options: {
-                type: Type.ARRAY,
+                type: SchemaType.ARRAY,
                 items: {
-                    type: Type.STRING
+                    type: SchemaType.STRING
                 },
                 description: "مصفوفة من أربعة خيارات محتملة للإجابة"
             },
             correctAnswer: {
-                type: Type.STRING,
+                type: SchemaType.STRING,
                 description: "الإجابة الصحيحة من بين الخيارات"
             }
         },
         required: ["question", "options", "correctAnswer"],
-        propertyOrdering: ["question", "options", "correctAnswer"]
     }
 };
-
-const STABLE_MODEL = "gemini-1.5-flash";
-const INTELLIGENT_MODEL = "gemini-1.5-pro";
 
 /**
  * Delay utility for retry mechanism
@@ -104,7 +105,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  */
 const runAiTask = async (
     apiKey: string | undefined,
-    task: (ai: any, model: string) => Promise<any>,
+    task: (model: any) => Promise<any>,
     description: string,
     maxRetries: number = 2
 ): Promise<any> => {
@@ -117,11 +118,13 @@ const runAiTask = async (
             // Try with the intelligent model first for better results
             try {
                 console.log(`AI Task: ${description} (Attempt ${attempt}/${maxRetries}, Model: ${INTELLIGENT_MODEL})`);
-                return await task(ai, INTELLIGENT_MODEL);
+                const model = ai.getGenerativeModel({ model: INTELLIGENT_MODEL });
+                return await task(model);
             } catch (firstError: any) {
                 console.warn(`${INTELLIGENT_MODEL} failed, falling back to ${STABLE_MODEL}:`, firstError.message);
                 // Fallback to the stable model
-                return await task(ai, STABLE_MODEL);
+                const model = ai.getGenerativeModel({ model: STABLE_MODEL });
+                return await task(model);
             }
         } catch (error: any) {
             lastError = error;
@@ -154,6 +157,49 @@ const runAiTask = async (
 };
 
 /**
+ * Streaming chat response
+ */
+export const streamChatMessage = async (
+    message: string,
+    history: { role: 'user' | 'model'; parts: { text: string }[] }[],
+    systemInstruction: string,
+    modelName: string = STABLE_MODEL,
+    apiKey?: string,
+    onChunk?: (chunk: string) => void
+): Promise<string> => {
+    try {
+        const ai = getAiClient(apiKey);
+        const model = ai.getGenerativeModel({
+            model: modelName,
+            systemInstruction: systemInstruction,
+        });
+
+        const chat = model.startChat({
+            history: history,
+            generationConfig: {
+                temperature: 0.7,
+                topP: 0.8,
+                topK: 40,
+            },
+        });
+
+        const result = await chat.sendMessageStream(message);
+        let fullText = "";
+
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            fullText += chunkText;
+            if (onChunk) onChunk(chunkText);
+        }
+
+        return fullText;
+    } catch (error: any) {
+        console.error("Streaming chat error:", error);
+        throw error;
+    }
+};
+
+/**
  * Robust JSON parsing for AI responses that might include markdown blocks.
  */
 const parseAiJson = (text: string): any => {
@@ -173,10 +219,11 @@ const parseAiJson = (text: string): any => {
 };
 
 export const generateQuiz = async (context: string, apiKey?: string): Promise<QuizQuestion[]> => {
-    return runAiTask(apiKey, async (ai, model) => {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: `أنت خبير تربوي متمرس في تصميم الاختبارات التقويمية.
+    return runAiTask(apiKey, async (model) => {
+        const result = await model.generateContent({
+            contents: [{
+                role: 'user', parts: [{
+                    text: `أنت خبير تربوي متمرس في تصميم الاختبارات التقويمية.
 
 ## المطلوب:
 قم بإنشاء 5 أسئلة اختيار من متعدد عالية الجودة باللغة العربية بناءً على النص المرفق.
@@ -198,21 +245,23 @@ export const generateQuiz = async (context: string, apiKey?: string): Promise<Qu
 ## النص المرجعي:
 """${context}"""
 
-أنتج 5 أسئلة بهذا المستوى من الجودة.`,
-            config: {
+أنتج 5 أسئلة بهذا المستوى من الجودة.` }]
+            }],
+            generationConfig: {
                 responseMimeType: "application/json",
-                responseSchema: questionGenerationSchema
+                responseSchema: questionGenerationSchema as any
             }
         });
-        return parseAiJson(response.text);
+        return parseAiJson(result.response.text());
     }, "Quiz Generation");
 };
 
 export const evaluateAnswer = async (context: string, question: string, answer: string, apiKey?: string): Promise<string> => {
-    return runAiTask(apiKey, async (ai, model) => {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: `أنت خبير تعليمي محفز ومهني (Pedagogical Expert). 
+    return runAiTask(apiKey, async (model) => {
+        const result = await model.generateContent({
+            contents: [{
+                role: 'user', parts: [{
+                    text: `أنت خبير تعليمي محفز ومهني (Pedagogical Expert). 
             قم بتقييم إجابة المتدرب التالية بدقة بناءً على النص المرجعي والسؤال المرفق.
             
             المطلوب:
@@ -224,16 +273,18 @@ export const evaluateAnswer = async (context: string, question: string, answer: 
             السياق المرجعي: ${context}
             السؤال المنشود: ${question}
             إجابة المتدرب: ${answer}`
+                }]
+            }]
         });
-        return response.text;
+        return result.response.text();
     }, "Answer Evaluation");
 };
 
 const skillScenarioSchema = {
-    type: Type.OBJECT,
+    type: SchemaType.OBJECT,
     properties: {
-        scenario: { type: Type.STRING },
-        question: { type: Type.STRING }
+        scenario: { type: SchemaType.STRING },
+        question: { type: SchemaType.STRING }
     },
     required: ["scenario", "question"]
 };
@@ -244,10 +295,11 @@ export const generateSkillScenario = async (
     specialization: string,
     apiKey?: string
 ): Promise<{ scenario: string; question: string; }> => {
-    return runAiTask(apiKey, async (ai, model) => {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: `أنت مدرب تطوير مهني محترف ومتخصص في المهارات الناعمة (Soft Skills Coach).
+    return runAiTask(apiKey, async (model) => {
+        const result = await model.generateContent({
+            contents: [{
+                role: 'user', parts: [{
+                    text: `أنت مدرب تطوير مهني محترف ومتخصص في المهارات الناعمة (Soft Skills Coach).
 
 ## المهمة:
 أنشئ سيناريو تدريبي واقعي ومشوق لتطوير المهارة التالية.
@@ -272,13 +324,14 @@ export const generateSkillScenario = async (
 ## السؤال:
 اختم بسؤال مفتوح يدفع المتدرب للتفكير في كيفية استخدام مهارة "${skillTitle}" لحل الموقف.
 
-اللغة: عربية فصيحة مهنية وسلسة.`,
-            config: {
+اللغة: عربية فصيحة مهنية وسلسة.` }]
+            }],
+            generationConfig: {
                 responseMimeType: "application/json",
-                responseSchema: skillScenarioSchema
+                responseSchema: skillScenarioSchema as any
             }
         });
-        return parseAiJson(response.text);
+        return parseAiJson(result.response.text());
     }, "Skill Scenario Generation");
 };
 
@@ -288,10 +341,11 @@ export const evaluateSkillAnswer = async (
     userAnswer: string,
     apiKey?: string
 ): Promise<string> => {
-    return runAiTask(apiKey, async (ai, model) => {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: `أنت كبير مدربي تطوير المهارات الذاتية والقيادية (Executive Coach). 
+    return runAiTask(apiKey, async (model) => {
+        const result = await model.generateContent({
+            contents: [{
+                role: 'user', parts: [{
+                    text: `أنت كبير مدربي تطوير المهارات الذاتية والقيادية (Executive Coach). 
             قم بتقييم استجابة المتدرب لسيناريو المهارة '${skillTitle}'.
             
             السيناريو المعطى:
@@ -306,29 +360,29 @@ export const evaluateSkillAnswer = async (
             3. **التحسين التطويري**: كيف يمكن تطوير هذا التصرف ليكون أكثر مثالية في بيئة العمل الحقيقية؟
             4. **الخلاصة**: كلمة تشجيعية قوية.
             
-            استخدم نبرة صوت (Tone of Voice) مهنية، محفزة، وتعليمية باللغة العربية.`
+            استخدم نبرة صوت (Tone of Voice) مهنية، محفزة، وتعليمية باللغة العربية.` }]
+            }]
         });
-        return response.text;
+        return result.response.text();
     }, "Skill Answer Evaluation");
 };
 
 const traineeExtractionSchema = {
-    type: Type.ARRAY,
+    type: SchemaType.ARRAY,
     items: {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: {
-            name: { type: Type.STRING, description: "الاسم الكامل للمتدرب" },
-            email: { type: Type.STRING, description: "البريد الإلكتروني" },
-            specialization: { type: Type.STRING, description: "التخصص أو الشعبة" },
-            phone: { type: Type.STRING, description: "رقم الهاتف" }
+            name: { type: SchemaType.STRING, description: "الاسم الكامل للمتدرب" },
+            email: { type: SchemaType.STRING, description: "البريد الإلكتروني" },
+            specialization: { type: SchemaType.STRING, description: "التخصص أو الشعبة" },
+            phone: { type: SchemaType.STRING, description: "رقم الهاتف" }
         },
         required: ["name", "email"],
-        propertyOrdering: ["name", "email", "specialization", "phone"]
     }
 };
 
 export const extractTraineesFromDocument = async (fileBase64: string, mimeType: string, apiKey?: string): Promise<any[]> => {
-    return runAiTask(apiKey, async (ai, model) => {
+    return runAiTask(apiKey, async (model) => {
         const prompt = `أنت خبير في استخراج البيانات من المستندات واللوائح المعقدة. 
         المطلوب: قم باستخراج قائمة المتدربين من الملف المرفق بدقة متناهية.
         حول البيانات إلى تنسيق JSON حسب المخطط المطلوب. 
@@ -336,8 +390,7 @@ export const extractTraineesFromDocument = async (fileBase64: string, mimeType: 
         إذا كان الحقل غير موجود، اتركه فارغاً. 
         أعطِ الأولوية للدقة وتأكد من أن البريد الإلكتروني صيغته صحيحة.`;
 
-        const response = await ai.models.generateContent({
-            model: model,
+        const result = await model.generateContent({
             contents: [
                 {
                     parts: [
@@ -351,12 +404,12 @@ export const extractTraineesFromDocument = async (fileBase64: string, mimeType: 
                     ]
                 }
             ],
-            config: {
+            generationConfig: {
                 responseMimeType: "application/json",
-                responseSchema: traineeExtractionSchema
+                responseSchema: traineeExtractionSchema as any
             }
         });
 
-        return parseAiJson(response.text);
+        return parseAiJson(result.response.text());
     }, "Document Trainee Extraction");
 };

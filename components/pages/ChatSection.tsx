@@ -6,7 +6,7 @@ import { ChatMessage, User, ChatChannel } from '../../types';
 import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, SpeakerWaveIcon, ChatBubbleLeftRightIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
 import { GoogleGenAI, Chat, GenerateContentResponse } from '@google/genai';
-import { textToSpeech, decodeBase64, decodeAudioData } from '../../services/geminiService';
+import { textToSpeech, decodeBase64, decodeAudioData, streamChatMessage, STABLE_MODEL } from '../../services/geminiService';
 import { useAi } from '../../contexts/AiContext';
 import Avatar from '../common/Avatar';
 import { getChatHistory, saveChatHistory } from '../../services/dataService';
@@ -172,22 +172,6 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
     };
 
     const initializeChannel = useCallback(async (channel: ChatChannel) => {
-        try {
-            const apiKey = await getApiKey();
-            if (!apiKey) return;
-
-            const ai = new GoogleGenAI({ apiKey });
-            chatSession.current = ai.chats.create({
-                model: channel.model || 'gemini-3-flash-preview',
-                config: {
-                    systemInstruction: channel.systemPrompt[locale],
-                    temperature: 0.7
-                },
-            });
-        } catch (error) {
-            console.error("AI Init Failed:", error);
-        }
-
         const savedHistory = getChatHistory(channel.id);
         if (savedHistory && savedHistory.length > 0) {
             setAiMessages(savedHistory);
@@ -223,13 +207,13 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newMessage.trim() === '' || !user || !activeChannel || !chatSession.current) return;
+        if (newMessage.trim() === '' || !user || !activeChannel) return;
 
         const timestamp = new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'fr-FR', { hour: '2-digit', minute: '2-digit' });
         const userMsg: ChatMessage = {
             id: Date.now(),
             user: user.displayName,
-            avatar: '', // نستخدم الحروف بدلاً من الصورة
+            avatar: '',
             text: newMessage,
             timestamp: timestamp,
         };
@@ -238,29 +222,50 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         setNewMessage('');
         setIsAiThinking(true);
 
+        const aiMsgId = Date.now() + 1;
+        const initialAiMsg: ChatMessage = {
+            id: aiMsgId,
+            user: t('chat.aiName'),
+            avatar: AI_AVATAR_ICON,
+            text: '',
+            timestamp: new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            hasAudio: true
+        };
+
+        setAiMessages(prev => [...prev, initialAiMsg]);
+
         try {
-            const result: GenerateContentResponse = await chatSession.current.sendMessage({ message: userMsg.text });
-            const aiMsg: ChatMessage = {
-                id: Date.now() + 1,
-                user: t('chat.aiName'),
-                avatar: AI_AVATAR_ICON, // المساعد يحتفظ بأيقونته المميزة
-                text: result.text || t('chat.aiError'),
-                timestamp: new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }),
-                hasAudio: true
-            };
-            setAiMessages(prev => [...prev, aiMsg]);
+            const apiKey = await getApiKey();
+
+            // Format history for Gemini
+            // We take last 10 messages for context
+            const history = aiMessages.slice(-10).map(m => ({
+                role: (m.user === user.displayName ? 'user' : 'model') as 'user' | 'model',
+                parts: [{ text: m.text }]
+            }));
+
+            let fullText = "";
+            await streamChatMessage(
+                userMsg.text,
+                history,
+                activeChannel.systemPrompt[locale],
+                activeChannel.model || STABLE_MODEL,
+                apiKey,
+                (chunk) => {
+                    setIsAiThinking(false);
+                    fullText += chunk;
+                    setAiMessages(prev => prev.map(m =>
+                        m.id === aiMsgId ? { ...m, text: fullText } : m
+                    ));
+                }
+            );
+
         } catch (error: any) {
             console.error("Chat error:", error);
-            const errMsg: ChatMessage = {
-                id: Date.now() + 2,
-                user: t('chat.aiName'),
-                avatar: AI_AVATAR_ICON,
-                text: t('chat.aiError'),
-                timestamp: timestamp,
-            };
-            setAiMessages(prev => [...prev, errMsg]);
-        } finally {
             setIsAiThinking(false);
+            setAiMessages(prev => prev.map(m =>
+                m.id === aiMsgId ? { ...m, text: t('chat.aiError') } : m
+            ));
         }
     };
 
@@ -276,10 +281,12 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                 <ChatBubbleLeftRightIcon className="h-8 w-8 text-primary-500" />
                 {t('chat.title')}
             </h2>
-            <Card className="flex flex-col md:flex-row h-[calc(100vh-220px)] overflow-hidden">
+            <Card className="flex flex-col md:flex-row h-[calc(100vh-220px)] overflow-hidden shadow-2xl border-none ring-1 ring-slate-200 dark:ring-slate-700">
                 {/* Channels Sidebar */}
-                <div className="w-full md:w-1/4 border-b md:border-b-0 md:border-e border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-4">
-                    <h3 className="font-bold mb-4 text-xs uppercase tracking-wider text-slate-500">{t('chat.channels')}</h3>
+                <div className="w-full md:w-80 border-b md:border-b-0 md:border-e border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/60 p-5 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{t('chat.channels')}</h3>
+                    </div>
                     <ul className="flex flex-row md:flex-col gap-2 overflow-x-auto no-scrollbar">
                         {chatChannels.map(channel => (
                             <ChannelButton
@@ -324,15 +331,15 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                                 ) : (
                                     <Avatar name={msg.user} size="sm" />
                                 )}
-                                <div className={`group relative max-w-[85%] sm:max-w-md p-4 rounded-2xl shadow-sm ${msg.user === user?.displayName
+                                <div className={`group relative max-w-[85%] sm:max-w-xl p-4 rounded-2xl shadow-sm transition-all duration-300 ${msg.user === user?.displayName
                                     ? 'bg-primary-600 text-white rounded-te-none'
-                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-ts-none'
+                                    : 'bg-slate-100 dark:bg-slate-700/50 text-slate-800 dark:text-slate-100 rounded-ts-none'
                                     }`}>
-                                    <div className="flex items-center justify-between gap-4 mb-1">
-                                        <p className="font-bold text-xs opacity-90">{msg.user}</p>
-                                        <p className="text-[10px] opacity-70">{msg.timestamp}</p>
+                                    <div className="flex items-center justify-between gap-4 mb-2">
+                                        <p className="font-bold text-xs tracking-wide opacity-80">{msg.user}</p>
+                                        <p className="text-[10px] opacity-60 font-mono">{msg.timestamp}</p>
                                     </div>
-                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
 
                                     {msg.hasAudio && (
                                         <button
@@ -405,16 +412,18 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
 
 interface ChannelButtonProps { name: string; channelId: string; activeChannelId: string; onClick: () => void; icon: React.ElementType; }
 const ChannelButton: React.FC<ChannelButtonProps> = ({ name, channelId, activeChannelId, onClick, icon: Icon }) => (
-    <li className="flex-none">
+    <li className="flex-none w-full">
         <button
             onClick={onClick}
-            className={`w-full text-center md:text-start p-3 rounded-xl text-sm transition-all flex items-center gap-3 ${activeChannelId === channelId
-                ? 'bg-primary-600 text-white shadow-md font-bold'
-                : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 shadow-sm'
+            className={`w-full text-start p-3.5 rounded-xl text-sm transition-all duration-200 flex items-center gap-3 group ${activeChannelId === channelId
+                ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20 font-bold scale-[1.02]'
+                : 'bg-white dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm'
                 }`}
         >
-            <Icon className={`h-5 w-5 ${activeChannelId === channelId ? 'text-white' : 'text-primary-500'}`} />
-            <span className="flex-grow whitespace-nowrap">{name}</span>
+            <div className={`p-2 rounded-lg transition-colors ${activeChannelId === channelId ? 'bg-white/20' : 'bg-primary-50 dark:bg-slate-800'}`}>
+                <Icon className={`h-5 w-5 ${activeChannelId === channelId ? 'text-white' : 'text-primary-500'}`} />
+            </div>
+            <span className="flex-grow truncate leading-tight">{name}</span>
         </button>
     </li>
 );

@@ -20,7 +20,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogin, onLogout, logoSrc, onTog
     const { t } = useI18n();
 
     return (
-        <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-white/20 dark:border-slate-800/50 shadow-sm transition-all duration-300">
+        <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-3.5 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-white/40 dark:border-slate-800/50 shadow-sm transition-all duration-300">
             <div className="flex items-center gap-4">
                 <button
                     onClick={onToggleSidebar}
@@ -67,9 +67,15 @@ const Header: React.FC<HeaderProps> = ({ user, onLogin, onLogout, logoSrc, onTog
                             </div>
 
                             {/* Dropdown Menu */}
-                            <div className="absolute top-full right-0 mt-3 w-48 py-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
-                                <button onClick={onLogout} className="w-full text-right px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
-                                    <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                            <div className="absolute top-full right-0 mt-3 w-52 py-2 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform scale-95 group-hover:scale-100 origin-top-right z-50 overflow-hidden">
+                                <div className="px-4 py-3 border-b border-slate-50 dark:border-slate-700 mb-1 bg-slate-50/50 dark:bg-slate-900/20">
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter mb-0.5">{t('global.platformTitle')}</p>
+                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{user.displayName}</p>
+                                </div>
+                                <button onClick={onLogout} className="w-full text-right px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors">
+                                    <div className="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/20">
+                                        <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                                    </div>
                                     {t('global.logout')}
                                 </button>
                             </div>

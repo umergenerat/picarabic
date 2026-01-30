@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import { ChatMessage, User, ChatChannel } from '../../types';
-import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, SpeakerWaveIcon, ChatBubbleLeftRightIcon } from '../common/Icons';
+import { LockClosedIcon, SparklesIcon, iconMap, Cog6ToothIcon, XMarkIcon, SpeakerWaveIcon, ChatBubbleLeftRightIcon, TrashIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
 import { GoogleGenAI, Chat, GenerateContentResponse } from '@google/genai';
 import { textToSpeech, decodeBase64, decodeAudioData, streamChatMessage, STABLE_MODEL } from '../../services/geminiService';
@@ -299,6 +299,13 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
         }
     };
 
+    const handleClearChat = () => {
+        if (activeChannel && window.confirm(t('chat.clearConfirm'))) {
+            localStorage.removeItem(`platformChatHistory_${activeChannel.id}`);
+            initializeChannel(activeChannel);
+        }
+    };
+
     const handleSaveSettings = (updatedChannel: ChatChannel) => {
         setChatChannels(prev => prev.map(c => c.id === updatedChannel.id ? updatedChannel : c));
         setIsSettingsOpen(false);
@@ -347,13 +354,16 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                                     {'ابدأ الاختبار الذكي'}
                                 </Button>
                             )}
+                            <Button variant="secondary" size="sm" onClick={handleClearChat} className="!p-2 text-rose-500 hover:text-rose-600">
+                                <TrashIcon className="h-5 w-5" />
+                            </Button>
                             <Button variant="secondary" size="sm" onClick={() => setIsSettingsOpen(true)} className="!p-2">
                                 <Cog6ToothIcon className="h-5 w-5" />
                             </Button>
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth force-scrollbar">
                         {aiMessages.map(msg => (
                             <div key={msg.id} className={`flex items-start gap-3 ${msg.user === user?.displayName ? 'flex-row-reverse' : ''}`}>
                                 {msg.avatar && msg.avatar.includes('gstatic') ? (

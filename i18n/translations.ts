@@ -165,6 +165,8 @@ const translations = {
             model: 'نموذج الذكاء الاصطناعي:',
             systemPrompt: 'التعليمات البرمجية للمساعد:',
             resetToDefault: 'استعادة الإعدادات الأصلية',
+            clearChat: 'مسح المحادثة',
+            clearConfirm: 'هل أنت متأكد من رغبتك في مسح سجل المحادثة لهذه القناة؟',
         },
         resources: {
             title: 'المصادر والروابط التعليمية',
@@ -274,6 +276,8 @@ const translations = {
             title: 'Assistance Éducative',
             listen: "Écouter",
             listening: "Lecture en cours...",
+            clearChat: 'Effacer la discussion',
+            clearConfirm: 'Êtes-vous sûr de vouloir effacer l\'historique de cette discussion ?',
         },
         dashboard: {
             months: {

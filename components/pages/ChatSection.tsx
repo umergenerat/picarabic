@@ -24,7 +24,7 @@ interface ChatSettingsModalProps {
 const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({ isOpen, onClose, channel, onSave, onReset }) => {
     const { t, locale } = useI18n();
     const [localChannel, setLocalChannel] = useState(channel);
-    const availableModels = ['gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-flash-lite-latest'];
+    const availableModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'];
 
     useEffect(() => {
         setLocalChannel(channel);
@@ -347,7 +347,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{activeChannel?.name[locale]}</h3>
-                                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold mt-0.5">{STABLE_MODEL}</p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold mt-0.5">{activeChannel?.model || STABLE_MODEL}</p>
                             </div>
                         </div>
                         <div className="flex gap-2">

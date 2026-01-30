@@ -49,13 +49,18 @@ export const decodeAudioData = async (
 
 const classifyAiError = (error: any): Error => {
     const msg = error.message || '';
-    if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
+    console.error("Original AI Error:", error);
+
+    if (msg.includes('API key') || msg.includes('401') || msg.includes('403') || msg.includes('not found')) {
         return new Error(AUTH_ERROR_MESSAGE);
     }
     if (msg.includes('quota') || msg.includes('429')) {
         return new Error(QUOTA_ERROR_MESSAGE);
     }
-    if (msg.includes('network') || msg.includes('fetch')) {
+    if (msg.includes('model') && msg.includes('not found')) {
+        return new Error("النموذج المختار غير متوفر حالياً. يرجى اختيار نموذج آخر من الإعدادات.");
+    }
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('Failed to fetch')) {
         return new Error("خطأ في الاتصال بالشبكة. يرجى التأكد من اتصالك بالإنترنت أو صحة مفتاح API.");
     }
     return new Error(msg || "عذراً، فشل الاتصال بخدمة الذكاء الاصطناعي.");
@@ -174,10 +179,10 @@ export const streamChatMessage = async (
     apiKey?: string,
     onChunk?: (chunk: string) => void
 ): Promise<string> => {
-    try {
+    const attemptChat = async (targetModel: string): Promise<string> => {
         const ai = getAiClient(apiKey);
         const model = ai.getGenerativeModel({
-            model: modelName,
+            model: targetModel,
             systemInstruction: systemInstruction,
         });
 
@@ -200,8 +205,24 @@ export const streamChatMessage = async (
         }
 
         return fullText;
+    };
+
+    try {
+        console.log(`Starting stream with model: ${modelName}`);
+        return await attemptChat(modelName);
     } catch (error: any) {
-        console.error("Streaming chat error:", error);
+        console.warn(`Streaming failed with ${modelName}:`, error.message);
+
+        // If it's a model not found error and we aren't already using the stable model
+        if (modelName !== STABLE_MODEL && (error.message?.includes('not found') || error.message?.includes('500') || error.message?.includes('model'))) {
+            console.info(`Falling back to ${STABLE_MODEL}...`);
+            try {
+                return await attemptChat(STABLE_MODEL);
+            } catch (fallbackError: any) {
+                throw classifyAiError(fallbackError);
+            }
+        }
+
         throw classifyAiError(error);
     }
 };

@@ -318,13 +318,13 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                 <ChatBubbleLeftRightIcon className="h-8 w-8 text-primary-500" />
                 {t('chat.title')}
             </h2>
-            <Card className="flex flex-col md:flex-row h-[calc(100vh-220px)] overflow-hidden shadow-2xl border-none ring-1 ring-slate-200 dark:ring-slate-700">
+            <Card className="flex flex-col md:flex-row h-[calc(100vh-220px)] overflow-hidden shadow-huge border-none ring-1 ring-slate-200/50 dark:ring-slate-700/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl rounded-3xl">
                 {/* Channels Sidebar */}
-                <div className="w-full md:w-80 border-b md:border-b-0 md:border-e border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/60 p-5 overflow-y-auto">
-                    <div className="flex items-center justify-between mb-6">
+                <div className="w-full md:w-80 border-b md:border-b-0 md:border-e border-slate-200/50 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/20 p-5 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-8 px-2">
                         <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{t('chat.channels')}</h3>
                     </div>
-                    <ul className="flex flex-row md:flex-col gap-2 overflow-x-auto scroll-container-focusable" tabIndex={0}>
+                    <ul className="flex flex-row md:flex-col gap-3 overflow-x-auto scroll-container-focusable" tabIndex={0}>
                         {chatChannels.map(channel => (
                             <ChannelButton
                                 key={channel.id}
@@ -339,58 +339,64 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                 </div>
 
                 {/* Chat Area */}
-                <div className="flex-1 flex flex-col bg-white dark:bg-slate-800">
-                    <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md z-10">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary-100 dark:bg-slate-700 rounded-lg">
-                                {activeChannel && React.createElement(iconMap[activeChannel.iconName] || SparklesIcon, { className: "h-5 w-5 text-primary-600" })}
+                <div className="flex-1 flex flex-col bg-white/50 dark:bg-slate-800/40">
+                    <div className="flex justify-between items-center p-5 border-b border-slate-200/50 dark:border-slate-700/50 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md z-10">
+                        <div className="flex items-center gap-4">
+                            <div className="p-2.5 bg-primary-100 dark:bg-primary-900/30 rounded-2xl shadow-sm">
+                                {activeChannel && React.createElement(iconMap[activeChannel.iconName] || SparklesIcon, { className: "h-5 w-5 text-primary-600 dark:text-primary-400" })}
                             </div>
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{activeChannel?.name[locale]}</h3>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{activeChannel?.name[locale]}</h3>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold mt-0.5">{STABLE_MODEL}</p>
+                            </div>
                         </div>
                         <div className="flex gap-2">
                             {activeChannel?.id === 'test-expert' && (
-                                <Button size="sm" onClick={handleStartSmartTest} className="bg-amber-500 hover:bg-amber-600 border-none">
+                                <Button size="sm" onClick={handleStartSmartTest} className="premium-gradient border-none shadow-glow">
                                     <SparklesIcon className="h-4 w-4 me-1" />
                                     {'ابدأ الاختبار الذكي'}
                                 </Button>
                             )}
-                            <Button variant="secondary" size="sm" onClick={handleClearChat} className="!p-2 text-rose-500 hover:text-rose-600">
+                            <Button variant="secondary" size="sm" onClick={handleClearChat} className="!p-2.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 border-slate-200/50 dark:border-slate-700/50">
                                 <TrashIcon className="h-5 w-5" />
                             </Button>
-                            <Button variant="secondary" size="sm" onClick={() => setIsSettingsOpen(true)} className="!p-2">
+                            <Button variant="secondary" size="sm" onClick={() => setIsSettingsOpen(true)} className="!p-2.5 border-slate-200/50 dark:border-slate-700/50">
                                 <Cog6ToothIcon className="h-5 w-5" />
                             </Button>
                         </div>
                     </div>
 
                     <div
-                        className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth force-scrollbar scroll-container-focusable"
+                        className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth force-scrollbar scroll-container-focusable bg-white/30 dark:bg-transparent"
                         tabIndex={0}
                     >
-                        {aiMessages.map(msg => (
-                            <div key={msg.id} className={`flex items-start gap-3 ${msg.user === user?.displayName ? 'flex-row-reverse' : ''}`}>
+                        {aiMessages.map((msg, idx) => (
+                            <div key={msg.id} className={`flex items-start gap-4 animate-message-in ${msg.user === user?.displayName ? 'flex-row-reverse' : ''}`} style={{ animationDelay: `${idx * 0.05}s` }}>
                                 {msg.avatar && msg.avatar.includes('gstatic') ? (
-                                    <img src={msg.avatar} alt={msg.user} className="w-9 h-9 rounded-full object-cover bg-white p-1 shadow-sm ring-2 ring-primary-100" />
-                                ) : (
-                                    <Avatar name={msg.user} size="sm" />
-                                )}
-                                <div className={`group relative max-w-[85%] sm:max-w-xl p-4 rounded-2xl shadow-sm transition-all duration-300 ${msg.user === user?.displayName
-                                    ? 'bg-primary-600 text-white rounded-te-none'
-                                    : 'bg-slate-100 dark:bg-slate-700/50 text-slate-800 dark:text-slate-100 rounded-ts-none'
-                                    }`}>
-                                    <div className="flex items-center justify-between gap-4 mb-2">
-                                        <p className="font-bold text-xs tracking-wide opacity-80">{msg.user}</p>
-                                        <p className="text-[10px] opacity-60 font-mono">{msg.timestamp}</p>
+                                    <div className="relative group">
+                                        <div className="absolute -inset-1 bg-gradient-to-r from-primary-400 to-blue-400 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+                                        <img src={msg.avatar} alt={msg.user} className="relative w-10 h-10 rounded-full object-cover bg-white p-1.5 shadow-md ring-1 ring-slate-100 dark:ring-slate-800" />
                                     </div>
-                                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                ) : (
+                                    <Avatar name={msg.user} size="sm" className="shadow-md" />
+                                )}
+                                <div className={`group relative max-w-[85%] sm:max-w-xl p-5 rounded-3xl chat-bubble-shadow transition-all duration-300 ${msg.user === user?.displayName
+                                    ? 'bg-gradient-to-br from-primary-600 to-primary-700 text-white rounded-te-none border-b border-primary-500/30'
+                                    : 'glass-panel bg-white/80 dark:bg-slate-700/60 text-slate-800 dark:text-slate-100 rounded-ts-none'
+                                    }`}>
+                                    <div className="flex items-center justify-between gap-6 mb-3">
+                                        <p className="font-bold text-[11px] uppercase tracking-wider opacity-90">{msg.user}</p>
+                                        <p className="text-[10px] opacity-60 font-medium">{msg.timestamp}</p>
+                                    </div>
+                                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap font-medium">{msg.text}</p>
 
                                     {msg.hasAudio && (
                                         <button
                                             onClick={() => handleListen(msg)}
-                                            className={`mt-3 flex items-center gap-2 text-xs font-semibold py-1.5 px-3 rounded-full transition-all ${msg.user === user?.displayName
-                                                ? 'bg-white/10 hover:bg-white/20 text-white'
-                                                : 'bg-primary-50 dark:bg-slate-600 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-slate-500'
-                                                } ${speakingId === msg.id ? 'animate-pulse ring-2 ring-primary-400' : ''}`}
+                                            className={`mt-4 flex items-center gap-2.5 text-[11px] font-bold py-2 px-4 rounded-full transition-all active:scale-95 ${msg.user === user?.displayName
+                                                ? 'bg-white/20 hover:bg-white/30 text-white border border-white/20'
+                                                : 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/50 border border-primary-100 dark:border-primary-800/50'
+                                                } ${speakingId === msg.id ? 'animate-pulse ring-2 ring-primary-400 dark:ring-primary-500' : ''}`}
                                         >
                                             <SpeakerWaveIcon className="h-3.5 w-3.5" />
                                             {speakingId === msg.id ? t('chat.listening') : t('chat.listen')}
@@ -400,27 +406,30 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                             </div>
                         ))}
                         {isAiThinking && (
-                            <div className="flex items-start gap-3">
-                                <img src={AI_AVATAR_ICON} className="w-9 h-9 rounded-full object-cover bg-white p-1" alt="AI Thinking" />
-                                <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-2xl rounded-ts-none flex gap-1 items-center">
-                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+                            <div className="flex items-start gap-4 animate-message-in">
+                                <div className="relative">
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-primary-400 to-blue-400 rounded-full blur opacity-25 animate-pulse"></div>
+                                    <img src={AI_AVATAR_ICON} className="relative w-10 h-10 rounded-full object-cover bg-white p-1.5 shadow-md" alt="AI Thinking" />
+                                </div>
+                                <div className="glass-panel bg-white/80 dark:bg-slate-700/60 p-5 rounded-3xl rounded-ts-none flex gap-1.5 items-center chat-bubble-shadow">
+                                    <span className="w-2 h-2 bg-primary-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                    <span className="w-2 h-2 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                    <span className="w-2 h-2 bg-primary-600 rounded-full animate-bounce"></span>
                                 </div>
                             </div>
                         )}
                         <div ref={messagesEndRef} />
                     </div>
 
-                    <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20">
+                    <div className="p-6 border-t border-slate-200/50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-900/40 backdrop-blur-md">
                         {user ? (
-                            <form onSubmit={handleSendMessage} className="flex gap-2 max-w-4xl mx-auto items-end">
-                                <div className="flex-1 relative">
+                            <form onSubmit={handleSendMessage} className="flex gap-3 max-w-4xl mx-auto items-end">
+                                <div className="flex-1 relative group">
+                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-primary-500 to-blue-500 rounded-2xl blur opacity-0 group-focus-within:opacity-10 transition duration-300"></div>
                                     <textarea
                                         value={newMessage}
                                         onChange={(e) => {
                                             setNewMessage(e.target.value);
-                                            // Reset height to auto to recalculate
                                             e.target.style.height = 'auto';
                                             e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
                                         }}
@@ -432,15 +441,18 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                                         }}
                                         placeholder={t('chat.messagePlaceholder')}
                                         rows={1}
-                                        className="w-full p-3 border border-slate-300 rounded-xl dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-primary-500 shadow-inner outline-none transition-all resize-none min-h-[48px] max-h-[200px]"
+                                        className="relative w-full p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-transparent shadow-soft outline-none transition-all resize-none min-h-[56px] max-h-[200px] text-slate-700 dark:text-slate-200 font-medium"
                                     />
                                 </div>
                                 <button
                                     type="submit"
                                     disabled={!newMessage.trim() || isAiThinking}
-                                    className="px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 h-[48px] flex items-center justify-center"
+                                    className="px-8 py-4 premium-gradient text-white rounded-2xl font-bold hover:shadow-glow disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed transition-all shadow-md active:scale-95 h-[56px] flex items-center justify-center min-w-[120px]"
                                 >
-                                    {t('chat.send')}
+                                    <span className="flex items-center gap-2">
+                                        {t('chat.send')}
+                                        <SparklesIcon className="h-4 w-4" />
+                                    </span>
                                 </button>
                             </form>
                         ) : (
@@ -468,18 +480,21 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
 
 interface ChannelButtonProps { name: string; channelId: string; activeChannelId: string; onClick: () => void; icon: React.ElementType; }
 const ChannelButton: React.FC<ChannelButtonProps> = ({ name, channelId, activeChannelId, onClick, icon: Icon }) => (
-    <li className="flex-none w-full">
+    <li className="flex-none w-full animate-sidebar-item">
         <button
             onClick={onClick}
-            className={`w-full text-start p-3.5 rounded-xl text-sm transition-all duration-200 flex items-center gap-3 group ${activeChannelId === channelId
-                ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20 font-bold scale-[1.02]'
-                : 'bg-white dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm'
+            className={`w-full text-start p-4 rounded-2xl text-sm transition-all duration-300 flex items-center gap-4 group relative overflow-hidden ${activeChannelId === channelId
+                ? 'bg-white dark:bg-slate-800 text-primary-600 dark:text-primary-400 shadow-lg shadow-primary-500/5 font-bold scale-[1.02] active-channel-glow'
+                : 'text-slate-500 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
         >
-            <div className={`p-2 rounded-lg transition-colors ${activeChannelId === channelId ? 'bg-white/20' : 'bg-primary-50 dark:bg-slate-800'}`}>
-                <Icon className={`h-5 w-5 ${activeChannelId === channelId ? 'text-white' : 'text-primary-500'}`} />
+            <div className={`p-2.5 rounded-xl transition-all duration-300 ${activeChannelId === channelId ? 'bg-primary-50 dark:bg-primary-900/30' : 'bg-slate-200/50 dark:bg-slate-700/30 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/20'}`}>
+                <Icon className={`h-5.5 w-5.5 transition-colors ${activeChannelId === channelId ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-primary-500'}`} />
             </div>
-            <span className="flex-grow truncate leading-tight">{name}</span>
+            <span className="flex-grow truncate leading-snug tracking-tight">{name}</span>
+            {activeChannelId === channelId && (
+                <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-primary-500 shadow-[0_0_8px_var(--color-primary-400)]"></div>
+            )}
         </button>
     </li>
 );

@@ -324,7 +324,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{t('chat.channels')}</h3>
                     </div>
-                    <ul className="flex flex-row md:flex-col gap-2 overflow-x-auto no-scrollbar">
+                    <ul className="flex flex-row md:flex-col gap-2 overflow-x-auto scroll-container-focusable" tabIndex={0}>
                         {chatChannels.map(channel => (
                             <ChannelButton
                                 key={channel.id}
@@ -363,7 +363,10 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth force-scrollbar">
+                    <div
+                        className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth force-scrollbar scroll-container-focusable"
+                        tabIndex={0}
+                    >
                         {aiMessages.map(msg => (
                             <div key={msg.id} className={`flex items-start gap-3 ${msg.user === user?.displayName ? 'flex-row-reverse' : ''}`}>
                                 {msg.avatar && msg.avatar.includes('gstatic') ? (

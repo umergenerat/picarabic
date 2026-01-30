@@ -45,6 +45,14 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+  /* Firefox Scrollbar Support */
+  scrollbar-width: thin;
+  scrollbar-color: #10b981 rgba(0, 0, 0, 0.1);
+}
+
+.dark {
+  scrollbar-color: #059669 rgba(255, 255, 255, 0.1);
 }
 
 /* High-Visibility Premium Scrollbar Styling */
@@ -83,6 +91,13 @@
 /* Scrollbar Visibility Utility */
 .force-scrollbar {
     overflow-y: scroll !important;
+    scrollbar-gutter: stable;
+}
+
+/* Accessible focus for keyboard scrolling */
+.scroll-container-focusable:focus {
+    outline: 2px solid var(--color-primary-400);
+    outline-offset: -2px;
 }
 
 /* Hide scrollbar utility (used sparingly for clean UI like sidebar icons) */

@@ -26,10 +26,7 @@ const Card: React.FC<CardProps> = ({ children, className = '', onClick }) => {
             {/* Optional subtle gradient overlay */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 dark:to-transparent pointer-events-none" />
 
-            {/* Content wrapper */}
-            <div className="relative z-10">
-                {children}
-            </div>
+            {children}
         </div>
     );
 };

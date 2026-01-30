@@ -339,7 +339,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                 </div>
 
                 {/* Chat Area */}
-                <div className="flex-1 flex flex-col bg-white/50 dark:bg-slate-800/40">
+                <div className="flex-1 flex flex-col h-full bg-white/50 dark:bg-slate-800/40">
                     <div className="flex justify-between items-center p-5 border-b border-slate-200/50 dark:border-slate-700/50 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md z-10">
                         <div className="flex items-center gap-4">
                             <div className="p-2.5 bg-primary-100 dark:bg-primary-900/30 rounded-2xl shadow-sm">

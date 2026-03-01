@@ -93,42 +93,27 @@ const EMAILJS_TEMPLATE_ID = 'template_forgot_pw';
 const EMAILJS_PUBLIC_KEY = 'mVv1MBmOI4j5u4xzW'; // ← ضع مفتاحك العام هنا
 
 export const notifyAdminPasswordReset = async (userEmail: string): Promise<void> => {
-    try {
-        await emailjs.send(
-            EMAILJS_SERVICE_ID,
-            EMAILJS_TEMPLATE_ID,
-            {
-                to_email: ADMIN_EMAIL,
-                user_email: userEmail,
-                request_time: new Date().toLocaleString('ar-DZ', {
-                    timeZone: 'Africa/Algiers',
-                    dateStyle: 'full',
-                    timeStyle: 'short',
-                }),
-                platform_name: 'منصة بيك عربيك',
-            },
-            EMAILJS_PUBLIC_KEY
-        );
-        console.log(`Admin notified about password reset request from: ${userEmail}`);
-    } catch (err) {
-        // لا نوقف العملية إذا فشل الإشعار
-        console.warn('Failed to notify admin about password reset:', err);
-    }
+    await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+            to_email: ADMIN_EMAIL,
+            user_email: userEmail,
+            request_time: new Date().toLocaleString('ar-DZ', {
+                timeZone: 'Africa/Algiers',
+                dateStyle: 'full',
+                timeStyle: 'short',
+            }),
+            platform_name: 'منصة بيك عربيك',
+        },
+        EMAILJS_PUBLIC_KEY
+    );
+    console.log(`Admin notified about password reset request from: ${userEmail}`);
 };
 
 export const resetPassword = async (email: string): Promise<void> => {
-    // إرسال إشعار للمدير أولاً (بشكل متوازٍ)
-    notifyAdminPasswordReset(email);
-
-    if (!supabase) {
-        // في وضع التجريبي نعيد رسالة نجاح
-        console.log(`Reset password email would be sent to ${email}`);
-        return;
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) throw new Error(error.message);
+    // إرسال إشعار للمدير عبر EmailJS (المسار الوحيد لأن Supabase SMTP غير مفعّل)
+    await notifyAdminPasswordReset(email);
 };
 
 // FIX: Implemented forceChangePassword to support password updates and profile synchronization.

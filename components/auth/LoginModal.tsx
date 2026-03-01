@@ -116,8 +116,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginAttempt
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                             </svg>
                                         </div>
-                                        <p className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('resetPassword.success')}</p>
-                                        <p className="text-slate-600 dark:text-slate-400">{t('login.resetEmailSent')}</p>
+                                        <p className="text-xl font-bold text-slate-900 dark:text-white mb-2">تم إرسال الطلب بنجاح</p>
+                                        <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                            تم إرسال إشعار إلى مدير المنصة على بريده الإلكتروني.<br />
+                                            <span className="font-bold text-primary-600 dark:text-primary-400">{ADMIN_EMAIL}</span><br />
+                                            سيتواصل معك في أقرب وقت لإعادة تعيين كلمة المرور.
+                                        </p>
                                     </div>
                                 ) : (
                                     <>

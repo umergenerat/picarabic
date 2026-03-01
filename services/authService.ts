@@ -1,6 +1,7 @@
 
 import { User, PlatformUser } from '../types';
 import { supabase } from './supabaseClient';
+import emailjs from '@emailjs/browser';
 
 export const ADMIN_EMAIL = 'aitloutouaom@gmail.com';
 
@@ -86,9 +87,41 @@ export const changePassword = async (currentPass: string, newPass: string, confi
     if (error) throw new Error(error.message);
 };
 
+// EmailJS configuration - يمكن تعديل هذه القيم من لوحة تحكم emailjs.com
+const EMAILJS_SERVICE_ID = 'service_picarabic';
+const EMAILJS_TEMPLATE_ID = 'template_forgot_pw';
+const EMAILJS_PUBLIC_KEY = 'mVv1MBmOI4j5u4xzW'; // ← ضع مفتاحك العام هنا
+
+export const notifyAdminPasswordReset = async (userEmail: string): Promise<void> => {
+    try {
+        await emailjs.send(
+            EMAILJS_SERVICE_ID,
+            EMAILJS_TEMPLATE_ID,
+            {
+                to_email: ADMIN_EMAIL,
+                user_email: userEmail,
+                request_time: new Date().toLocaleString('ar-DZ', {
+                    timeZone: 'Africa/Algiers',
+                    dateStyle: 'full',
+                    timeStyle: 'short',
+                }),
+                platform_name: 'منصة بيك عربيك',
+            },
+            EMAILJS_PUBLIC_KEY
+        );
+        console.log(`Admin notified about password reset request from: ${userEmail}`);
+    } catch (err) {
+        // لا نوقف العملية إذا فشل الإشعار
+        console.warn('Failed to notify admin about password reset:', err);
+    }
+};
+
 export const resetPassword = async (email: string): Promise<void> => {
+    // إرسال إشعار للمدير أولاً (بشكل متوازٍ)
+    notifyAdminPasswordReset(email);
+
     if (!supabase) {
-        // Mock success in demo mode
+        // في وضع التجريبي نعيد رسالة نجاح
         console.log(`Reset password email would be sent to ${email}`);
         return;
     }

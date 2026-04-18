@@ -54,11 +54,9 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         // If no key, show modal and return a promise
         return new Promise((resolve, reject) => {
             pendingRequests.current.push({ resolve, reject });
-            if (!isModalOpen) {
-                setIsModalOpen(true);
-            }
+            setIsModalOpen(true);
         });
-    }, [apiKey, isModalOpen]);
+    }, [apiKey]);
 
     const closeModal = useCallback(() => {
         setIsModalOpen(false);

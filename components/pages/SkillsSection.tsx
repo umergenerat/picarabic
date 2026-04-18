@@ -142,9 +142,9 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-            <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col">
-                <div className="p-5 border-b border-slate-200 dark:border-slate-700">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex justify-center items-center p-4 animate-fade-in">
+            <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-huge border-none ring-1 ring-white/20 dark:ring-slate-700/50 bg-white/90 dark:bg-slate-900/90 rounded-[28px]">
+                <div className="p-6 border-b border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md">
                     <div className="flex justify-between items-center">
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white">{t('skills.practiceTitle', { skillName: skill.title[locale] })}</h3>
                         <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -189,19 +189,21 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                                 </div>
                             )}
 
-                            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                                <h4 className="font-bold text-primary-600 dark:text-primary-400 mb-2">{t('skills.scenario')}</h4>
-                                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{scenario}</p>
-                                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap mt-3 font-semibold">{question}</p>
+                            <div className="p-6 rounded-2xl glass-panel bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 shadow-sm animate-slide-in-bottom">
+                                <h4 className="font-extrabold text-sm uppercase tracking-wider text-primary-600 dark:text-primary-400 mb-3">{t('skills.scenario')}</h4>
+                                <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed text-[15px]">{scenario}</p>
+                                <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
+                                    <p className="text-slate-900 dark:text-white whitespace-pre-wrap font-bold leading-relaxed">{question}</p>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('skills.yourResponse')}</label>
+                            <div className="animate-slide-in-bottom" style={{ animationDelay: '0.1s' }}>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 ms-2">{t('skills.yourResponse')}</label>
                                 <textarea
                                     value={userAnswer}
                                     onChange={(e) => setUserAnswer(e.target.value)}
                                     rows={5}
-                                    className="w-full p-2 border border-slate-300 rounded-md dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-primary-500"
+                                    className="input-premium resize-none custom-scrollbar text-[15px] leading-relaxed shadow-sm dark:bg-slate-800/80"
                                     placeholder={t('skills.yourResponsePlaceholder')}
                                     disabled={isEvaluating || !!feedback}
                                 />
@@ -217,24 +219,26 @@ const SkillPracticeModal: React.FC<SkillPracticeModalProps> = ({ skill, speciali
                             {error && feedback === '' && <p className="text-red-500 mt-2">{error}</p>}
 
                             {feedback && (
-                                <div className="mt-4 p-4 border-s-4 rounded-md bg-green-50 dark:bg-slate-800 border-green-500">
-                                    <div className="flex items-center gap-2">
-                                        <LightBulbIcon className="h-6 w-6 text-green-500" />
-                                        <h5 className="font-bold text-green-800 dark:text-green-300">{t('skills.aiFeedback')}</h5>
+                                <div className="mt-6 p-6 border border-primary-200/50 dark:border-primary-900/30 rounded-2xl bg-gradient-to-br from-primary-50/80 to-emerald-50/80 dark:from-slate-800/90 dark:to-primary-900/20 shadow-sm animate-zoom-in">
+                                    <div className="flex items-center gap-3 mb-4 border-b border-primary-100 dark:border-primary-800/30 pb-3">
+                                        <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
+                                            <LightBulbIcon className="h-6 w-6 text-primary-500" />
+                                        </div>
+                                        <h5 className="font-bold text-lg text-primary-900 dark:text-primary-100">{t('skills.aiFeedback')}</h5>
                                     </div>
-                                    <p className="text-slate-700 dark:text-slate-300 mt-2 whitespace-pre-wrap">{feedback}</p>
+                                    <p className="text-slate-800 dark:text-slate-200 mt-2 whitespace-pre-wrap leading-relaxed text-[15px]">{feedback}</p>
                                 </div>
                             )}
                         </>
                     )}
                 </div>
 
-                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 flex flex-wrap justify-between items-center gap-3 rounded-b-xl border-t border-slate-200 dark:border-slate-700">
+                <div className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md px-6 py-5 flex flex-wrap justify-between items-center gap-4 border-t border-slate-200/50 dark:border-slate-800/50">
                     <div className="flex gap-2">
                         {onConsultExpert && (
                             <button
                                 onClick={onConsultExpert}
-                                className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-bold text-sm bg-primary-50 dark:bg-primary-900/30 px-3 py-1.5 rounded-lg transition-colors"
+                                className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-bold text-sm bg-white dark:bg-slate-800 shadow-sm border border-primary-100 dark:border-primary-900/50 px-4 py-2 rounded-xl transition-all hover:shadow-md hover:scale-105 active:scale-95"
                             >
                                 <SparklesIcon className="h-4 w-4" />
                                 {t('skills.consultExpert') || 'استشارة الخبير'}
@@ -302,22 +306,25 @@ const SkillCard: React.FC<SkillCardProps> = ({ skill, isCompleted, onPractice })
     const { locale, t } = useI18n();
     const Icon = iconMap[skill.iconName] || SparklesIcon;
     return (
-        <Card className="p-6 flex flex-col justify-between">
-            <div>
-                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 dark:bg-slate-700 text-primary-500 mx-auto mb-4">
-                    <Icon className="h-8 w-8" />
+        <Card className="p-8 flex flex-col justify-between h-full group card-hover border-none ring-1 ring-slate-200/50 dark:ring-slate-700/50 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm relative overflow-hidden rounded-3xl">
+            {/* Soft decorative background element */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary-400 rounded-full blur-[60px] opacity-10 group-hover:opacity-20 transition-opacity duration-500"></div>
+            
+            <div className="relative z-10 w-full mb-6">
+                <div className="flex items-center justify-center h-20 w-20 rounded-[20px] bg-gradient-to-br from-primary-50 to-primary-100 dark:from-slate-700 dark:to-slate-800 text-primary-500 mx-auto mb-6 shadow-sm border border-primary-100/50 dark:border-slate-600 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300">
+                    <Icon className="h-10 w-10" />
                 </div>
                 <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-white text-center">{skill.title[locale]}</h3>
                 <p className="text-slate-600 dark:text-slate-300 text-center mb-6">{skill.description[locale]}</p>
             </div>
-            <div className="mt-auto">
+            <div className="mt-auto relative z-10">
                 {isCompleted ? (
-                    <div className="flex items-center justify-center gap-2 p-2 rounded-md bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 font-semibold">
+                    <div className="flex items-center justify-center gap-2.5 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-200/50 dark:border-emerald-800/50 shadow-sm animate-fade-in">
                         <CheckCircleIcon className="h-5 w-5" />
                         <span>{t('skills.completed')}</span>
                     </div>
                 ) : (
-                    <Button onClick={onPractice} className="w-full">
+                    <Button onClick={onPractice} className="w-full !rounded-2xl !py-3.5 shadow-sm group-hover:shadow-md group-hover:bg-primary-600 transition-all font-bold tracking-wide">
                         {t('skills.startPractice')}
                     </Button>
                 )}

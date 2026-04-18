@@ -380,9 +380,9 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                                 ) : (
                                     <Avatar name={msg.user} size="sm" className="shadow-md" />
                                 )}
-                                <div className={`group relative max-w-[85%] sm:max-w-xl p-5 rounded-3xl chat-bubble-shadow transition-all duration-300 ${msg.user === user?.displayName
-                                    ? 'bg-gradient-to-br from-primary-600 to-primary-700 text-white rounded-te-none border-b border-primary-500/30'
-                                    : 'glass-panel bg-white/80 dark:bg-slate-700/60 text-slate-800 dark:text-slate-100 rounded-ts-none'
+                                <div className={`group relative max-w-[85%] sm:max-w-xl p-5 rounded-[24px] chat-bubble-shadow transition-all duration-300 ${msg.user === user?.displayName
+                                    ? 'bg-gradient-to-br from-primary-500 to-primary-700 text-white rounded-tr-sm border-none shadow-[0_8px_20px_rgba(16,185,129,0.2)]'
+                                    : 'glass-panel bg-white/90 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 rounded-tl-sm border border-slate-100 dark:border-slate-700/50 shadow-sm'
                                     }`}>
                                     <div className="flex items-center justify-between gap-6 mb-3">
                                         <p className="font-bold text-[11px] uppercase tracking-wider opacity-90">{msg.user}</p>
@@ -421,17 +421,16 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                         <div ref={messagesEndRef} />
                     </div>
 
-                    <div className="p-6 border-t border-slate-200/50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-900/40 backdrop-blur-md">
+                    <div className="p-4 md:p-6 bg-gradient-to-t from-white/80 to-transparent dark:from-slate-900/80 dark:to-transparent pt-10 mt-auto backdrop-blur-sm z-20">
                         {user ? (
-                            <form onSubmit={handleSendMessage} className="flex gap-3 max-w-4xl mx-auto items-end">
-                                <div className="flex-1 relative group">
-                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-primary-500 to-blue-500 rounded-2xl blur opacity-0 group-focus-within:opacity-10 transition duration-300"></div>
+                            <form onSubmit={handleSendMessage} className="flex gap-3 max-w-4xl mx-auto items-end bg-white/70 dark:bg-slate-800/70 p-2 md:p-3 rounded-full border border-slate-200/50 dark:border-slate-700/50 shadow-xl backdrop-blur-xl">
+                                <div className="flex-1 relative group w-full">
                                     <textarea
                                         value={newMessage}
                                         onChange={(e) => {
                                             setNewMessage(e.target.value);
                                             e.target.style.height = 'auto';
-                                            e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+                                            e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
                                         }}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && !e.shiftKey) {
@@ -441,18 +440,19 @@ const ChatSection: React.FC<ChatSectionProps> = ({ user, chatChannels, setChatCh
                                         }}
                                         placeholder={t('chat.messagePlaceholder')}
                                         rows={1}
-                                        className="relative w-full p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-transparent shadow-soft outline-none transition-all resize-none min-h-[56px] max-h-[200px] text-slate-700 dark:text-slate-200 font-medium"
+                                        className="w-full px-5 py-3.5 bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 font-medium whitespace-pre-wrap outline-none resize-none min-h-[52px] max-h-[150px] custom-scrollbar rounded-3xl leading-relaxed"
                                     />
                                 </div>
                                 <button
                                     type="submit"
                                     disabled={!newMessage.trim() || isAiThinking}
-                                    className="px-8 py-4 premium-gradient text-white rounded-2xl font-bold hover:shadow-glow disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed transition-all shadow-md active:scale-95 h-[56px] flex items-center justify-center min-w-[120px]"
+                                    className="p-3.5 sm:px-6 sm:py-3.5 premium-gradient text-white rounded-full font-bold hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed transition-all shadow-md active:scale-95 flex items-center justify-center shrink-0 min-w-[52px]"
                                 >
-                                    <span className="flex items-center gap-2">
+                                    <span className="hidden sm:flex items-center gap-2">
                                         {t('chat.send')}
-                                        <SparklesIcon className="h-4 w-4" />
+                                        <SparklesIcon className="h-4 w-4 hidden md:block" />
                                     </span>
+                                    <SparklesIcon className="h-5 w-5 sm:hidden" />
                                 </button>
                             </form>
                         ) : (

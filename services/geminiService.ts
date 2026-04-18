@@ -17,7 +17,11 @@ export const LATEST_MODEL = "gemini-2.0-flash-exp";
 export const AUTH_ERROR_MESSAGE = "AUTH_ERROR: Invalid or missing API Key";
 export const QUOTA_ERROR_MESSAGE = "QUOTA_ERROR: Limit exceeded";
 
-// Utilities for Audio Decoding
+// ============================================================
+// Web Speech API TTS (Browser Built-in, Free, Supports Arabic)
+// ============================================================
+
+// Keep these exports for backward compatibility (no longer used for audio decoding)
 export const decodeBase64 = (base64: string) => {
     const binaryString = atob(base64);
     const len = binaryString.length;
@@ -37,7 +41,6 @@ export const decodeAudioData = async (
     const dataInt16 = new Int16Array(data.buffer);
     const frameCount = dataInt16.length / numChannels;
     const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-
     for (let channel = 0; channel < numChannels; channel++) {
         const channelData = buffer.getChannelData(channel);
         for (let i = 0; i < frameCount; i++) {
@@ -45,6 +48,49 @@ export const decodeAudioData = async (
         }
     }
     return buffer;
+};
+
+// Active utterance reference for stop support
+let activeUtterance: SpeechSynthesisUtterance | null = null;
+
+export const stopSpeech = () => {
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        activeUtterance = null;
+    }
+};
+
+// ============================================================
+// Cache System for API Optimization (Cost / Quota saving)
+// ============================================================
+
+const hashString = (str: string): string => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit int
+    }
+    return hash.toString(36);
+};
+
+const getFromCache = (key: string): any => {
+    try {
+        const cached = localStorage.getItem(`ai_cache_${key}`);
+        if (cached) return JSON.parse(cached);
+    } catch (e) {
+        console.warn("Storage warning:", e);
+    }
+    return null;
+};
+
+const saveToCache = (key: string, data: any) => {
+    try {
+        localStorage.setItem(`ai_cache_${key}`, JSON.stringify(data));
+    } catch (e) {
+        // Handle QuotaExceededError implicitly
+        console.warn("Could not save to cache:", e);
+    }
 };
 
 const classifyAiError = (error: any): Error => {
@@ -66,30 +112,60 @@ const classifyAiError = (error: any): Error => {
     return new Error(msg || "عذراً، فشل الاتصال بخدمة الذكاء الاصطناعي.");
 };
 
-export const textToSpeech = async (text: string, apiKey?: string): Promise<string> => {
-    try {
-        const ai = getAiClient(apiKey);
-        const model = ai.getGenerativeModel({ model: LATEST_MODEL });
-        console.log('TTS request for:', text.substring(0, 20) + '...');
-        const result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: `انطق النص التالي بوضوح وبلغة عربية فصيحة: ${text}` }] }],
-            generationConfig: {
-                responseModalities: ["audio"],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Kore' },
-                    },
-                },
-            } as any,
-        });
-        const responseData = result.response;
-        const base64Audio = responseData.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (!base64Audio) throw new Error("No audio data returned from Gemini TTS");
-        return base64Audio;
-    } catch (error: any) {
-        console.error("Error generating speech:", error);
-        throw classifyAiError(error);
-    }
+/**
+ * Reads text aloud using the browser's built-in Web Speech API.
+ * Supports Arabic natively. Returns a Promise that resolves when speech ends.
+ * @param text - The text to speak
+ * @param onEnd - Optional callback when speech finishes
+ */
+export const speakText = (text: string, onEnd?: () => void): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        if (!window.speechSynthesis) {
+            reject(new Error("متصفحك لا يدعم ميزة القراءة الصوتية."));
+            return;
+        }
+
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        // Strip HTML tags from the text
+        const plainText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+        const utterance = new SpeechSynthesisUtterance(plainText);
+        utterance.lang = 'ar-SA';
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // Try to find an Arabic voice
+        const voices = window.speechSynthesis.getVoices();
+        const arabicVoice = voices.find(v => v.lang.startsWith('ar'));
+        if (arabicVoice) utterance.voice = arabicVoice;
+
+        activeUtterance = utterance;
+
+        utterance.onend = () => {
+            activeUtterance = null;
+            onEnd?.();
+            resolve();
+        };
+
+        utterance.onerror = (e) => {
+            activeUtterance = null;
+            if (e.error === 'interrupted' || e.error === 'canceled') {
+                resolve(); // Not a real error
+            } else {
+                reject(new Error(`خطأ في القراءة الصوتية: ${e.error}`));
+            }
+        };
+
+        window.speechSynthesis.speak(utterance);
+    });
+};
+
+/** @deprecated Use speakText() instead – Gemini TTS API no longer supports audio modality in generateContent */
+export const textToSpeech = async (text: string, _apiKey?: string): Promise<string> => {
+    throw new Error("DEPRECATED: Use speakText() directly via Web Speech API");
 };
 
 const questionGenerationSchema = {
@@ -137,15 +213,15 @@ const runAiTask = async (
         try {
             const ai = getAiClient(apiKey);
 
-            // Try with the intelligent model first for better results
+            // Try with the stable (flash) model first to save quota and cost
             try {
-                console.log(`AI Task: ${description} (Attempt ${attempt}/${maxRetries}, Model: ${INTELLIGENT_MODEL})`);
-                const model = ai.getGenerativeModel({ model: INTELLIGENT_MODEL });
+                console.log(`AI Task: ${description} (Attempt ${attempt}/${maxRetries}, Model: ${STABLE_MODEL})`);
+                const model = ai.getGenerativeModel({ model: STABLE_MODEL });
                 return await task(model);
             } catch (firstError: any) {
-                console.warn(`${INTELLIGENT_MODEL} failed, falling back to ${STABLE_MODEL}:`, firstError.message);
-                // Fallback to the stable model
-                const model = ai.getGenerativeModel({ model: STABLE_MODEL });
+                console.warn(`${STABLE_MODEL} failed, falling back to ${INTELLIGENT_MODEL}:`, firstError.message);
+                // Fallback to the intelligent model if needed
+                const model = ai.getGenerativeModel({ model: INTELLIGENT_MODEL });
                 return await task(model);
             }
         } catch (error: any) {
@@ -247,8 +323,15 @@ const parseAiJson = (text: string): any => {
 };
 
 export const generateQuiz = async (context: string, apiKey?: string): Promise<QuizQuestion[]> => {
-    return runAiTask(apiKey, async (model) => {
-        const result = await model.generateContent({
+    const cacheKey = hashString(`quiz_${context}`);
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+        console.log("Serving Quiz Generation from cache");
+        return cached;
+    }
+
+    const result = await runAiTask(apiKey, async (model) => {
+        const response = await model.generateContent({
             contents: [{
                 role: 'user', parts: [{
                     text: `أنت خبير تربوي متمرس في تصميم الاختبارات التقويمية.
@@ -280,13 +363,23 @@ export const generateQuiz = async (context: string, apiKey?: string): Promise<Qu
                 responseSchema: questionGenerationSchema as any
             }
         });
-        return parseAiJson(result.response.text());
+        return parseAiJson(response.response.text());
     }, "Quiz Generation");
+
+    saveToCache(cacheKey, result);
+    return result;
 };
 
 export const evaluateAnswer = async (context: string, question: string, answer: string, apiKey?: string): Promise<string> => {
-    return runAiTask(apiKey, async (model) => {
-        const result = await model.generateContent({
+    const cacheKey = hashString(`eval_${context}_${question}_${answer}`);
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+        console.log("Serving Answer Evaluation from cache");
+        return cached;
+    }
+
+    const result = await runAiTask(apiKey, async (model) => {
+        const response = await model.generateContent({
             contents: [{
                 role: 'user', parts: [{
                     text: `أنت خبير تعليمي محفز ومهني (Pedagogical Expert). 
@@ -304,8 +397,11 @@ export const evaluateAnswer = async (context: string, question: string, answer: 
                 }]
             }]
         });
-        return result.response.text();
+        return response.response.text();
     }, "Answer Evaluation");
+
+    saveToCache(cacheKey, result);
+    return result;
 };
 
 const skillScenarioSchema = {
@@ -323,8 +419,15 @@ export const generateSkillScenario = async (
     specialization: string,
     apiKey?: string
 ): Promise<{ scenario: string; question: string; }> => {
-    return runAiTask(apiKey, async (model) => {
-        const result = await model.generateContent({
+    const cacheKey = hashString(`scenario_${skillTitle}_${skillDescription}_${specialization}`);
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+        console.log("Serving Skill Scenario from cache");
+        return cached;
+    }
+
+    const result = await runAiTask(apiKey, async (model) => {
+        const response = await model.generateContent({
             contents: [{
                 role: 'user', parts: [{
                     text: `أنت مدرب تطوير مهني محترف ومتخصص في المهارات الناعمة (Soft Skills Coach).
@@ -359,8 +462,11 @@ export const generateSkillScenario = async (
                 responseSchema: skillScenarioSchema as any
             }
         });
-        return parseAiJson(result.response.text());
+        return parseAiJson(response.response.text());
     }, "Skill Scenario Generation");
+
+    saveToCache(cacheKey, result);
+    return result;
 };
 
 export const evaluateSkillAnswer = async (
@@ -369,8 +475,15 @@ export const evaluateSkillAnswer = async (
     userAnswer: string,
     apiKey?: string
 ): Promise<string> => {
-    return runAiTask(apiKey, async (model) => {
-        const result = await model.generateContent({
+    const cacheKey = hashString(`skilleval_${skillTitle}_${scenario}_${userAnswer}`);
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+        console.log("Serving Skill Answer Evaluation from cache");
+        return cached;
+    }
+
+    const result = await runAiTask(apiKey, async (model) => {
+        const response = await model.generateContent({
             contents: [{
                 role: 'user', parts: [{
                     text: `أنت كبير مدربي تطوير المهارات الذاتية والقيادية (Executive Coach). 
@@ -391,8 +504,11 @@ export const evaluateSkillAnswer = async (
             استخدم نبرة صوت (Tone of Voice) مهنية، محفزة، وتعليمية باللغة العربية.` }]
             }]
         });
-        return result.response.text();
+        return response.response.text();
     }, "Skill Answer Evaluation");
+
+    saveToCache(cacheKey, result);
+    return result;
 };
 
 const traineeExtractionSchema = {

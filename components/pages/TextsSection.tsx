@@ -4,7 +4,7 @@ import Card from '../common/Card';
 import Button from '../common/Button';
 import Spinner from '../common/Spinner';
 import Drawer from '../common/Drawer';
-import { evaluateAnswer, textToSpeech, decodeBase64, decodeAudioData } from '../../services/geminiService';
+import { evaluateAnswer, speakText, stopSpeech } from '../../services/geminiService';
 import { LightBulbIcon, XMarkIcon, CheckCircleIcon, SpeakerWaveIcon, SparklesIcon, BookOpenIcon, iconMap, ChevronRightIcon, ChevronLeftIcon, PlayCircleIcon } from '../common/Icons';
 import { useI18n } from '../../contexts/I18nContext';
 import { useAi } from '../../contexts/AiContext';
@@ -42,15 +42,12 @@ const TextDetailView: React.FC<{ text: TextData; skills: Skill[] }> = ({ text, s
     // Cleanup audio on unmount
     useEffect(() => {
         return () => {
-            stopAudio();
+            stopSpeech();
         };
     }, []);
 
     const stopAudio = () => {
-        if (currentSourceRef.current) {
-            currentSourceRef.current.stop();
-            currentSourceRef.current = null;
-        }
+        stopSpeech();
         setIsSpeaking(false);
     };
 
@@ -61,38 +58,12 @@ const TextDetailView: React.FC<{ text: TextData; skills: Skill[] }> = ({ text, s
         }
 
         setIsSpeaking(true);
+        setError('');
         try {
-            const executeAndPlay = async (key: string) => {
-                const base64Audio = await textToSpeech(textToSpeak, key);
-                if (!audioContextRef.current) {
-                    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-                }
-                const audioData = decodeBase64(base64Audio);
-                const audioBuffer = await decodeAudioData(audioData, audioContextRef.current);
-
-                const source = audioContextRef.current.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(audioContextRef.current.destination);
-                source.onended = () => setIsSpeaking(false);
-                source.start();
-                currentSourceRef.current = source;
-            };
-
-            const apiKey = await getApiKey();
-            try {
-                await executeAndPlay(apiKey);
-            } catch (innerErr: any) {
-                if (innerErr.message.includes('AUTH_ERROR')) {
-                    clearApiKey();
-                    const newKey = await getApiKey();
-                    await executeAndPlay(newKey);
-                } else {
-                    throw innerErr;
-                }
-            }
+            await speakText(textToSpeak, () => setIsSpeaking(false));
         } catch (err: any) {
             console.error("Audio error:", err);
-            setError(t('texts.errorAudio'));
+            setError(err.message || t('texts.errorAudio'));
             setIsSpeaking(false);
         }
     };
@@ -273,12 +244,12 @@ const TextDetailView: React.FC<{ text: TextData; skills: Skill[] }> = ({ text, s
                                         {selectedQuestion.options.map(option => (
                                             <label
                                                 key={option.id}
-                                                className={`flex items-center p-3.5 rounded-xl border transition-all duration-200 cursor-pointer ${userAnswer === option.id
-                                                    ? 'bg-primary-50 dark:bg-primary-900/10 border-primary-500 shadow-inner'
-                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                                                className={`flex items-center p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer group ${userAnswer === option.id
+                                                    ? 'bg-primary-50/50 dark:bg-primary-900/20 border-primary-500 shadow-[0_0_15px_rgba(16,185,129,0.15)] scale-[1.01]'
+                                                    : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-md'
                                                     }`}
                                             >
-                                                <div className={`flex items-center justify-center w-5 h-5 rounded-full border transition-colors ${userAnswer === option.id ? 'border-primary-500 bg-primary-500' : 'border-slate-300 dark:border-slate-600'}`}>
+                                                <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all duration-300 ${userAnswer === option.id ? 'border-primary-500 bg-primary-500 scale-110' : 'border-slate-300 dark:border-slate-600 group-hover:border-primary-400'}`}>
                                                     {userAnswer === option.id && <div className="w-2 h-2 rounded-full bg-white" />}
                                                 </div>
                                                 <input
@@ -299,7 +270,7 @@ const TextDetailView: React.FC<{ text: TextData; skills: Skill[] }> = ({ text, s
                                             value={userAnswer}
                                             onChange={(e) => setUserAnswer(e.target.value)}
                                             rows={4}
-                                            className="w-full p-4 text-sm border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+                                            className="input-premium resize-none custom-scrollbar text-[15px] leading-relaxed shadow-sm dark:bg-slate-800/80"
                                             placeholder={t('texts.yourAnswerPlaceholder')}
                                         />
                                         <div className="absolute bottom-3 end-3 text-xs text-slate-400">{userAnswer.length} chars</div>
@@ -320,7 +291,7 @@ const TextDetailView: React.FC<{ text: TextData; skills: Skill[] }> = ({ text, s
                                         </Button>
                                     ) : <div></div>}
 
-                                    <Button onClick={handleEvaluate} isLoading={isLoading} disabled={!userAnswer.trim()} className="px-6 rounded-xl">
+                                    <Button onClick={handleEvaluate} isLoading={isLoading} disabled={!userAnswer.trim()} className="px-8 rounded-xl shadow-md hover:shadow-glow transition-all">
                                         {isMultipleChoice ? t('texts.checkAnswerButton') : t('texts.evaluateButton')}
                                     </Button>
                                 </div>

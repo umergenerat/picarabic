@@ -21,7 +21,9 @@ interface AiContextType {
 const AiContext = createContext<AiContextType | undefined>(undefined);
 
 export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [apiKey, _setApiKey] = useState<string | null>(localStorage.getItem('VITE_GEMINI_API_KEY'));
+    // محاولة قراءة المفتاح من ملف التكوين .env أولاً، ثم التخزين المحلي كبديل
+    const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const [apiKey, _setApiKey] = useState<string | null>(envKey || localStorage.getItem('VITE_GEMINI_API_KEY'));
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,11 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     const handleAiError = useCallback(async (err: any): Promise<boolean> => {
         if (err.message === AUTH_ERROR_MESSAGE) {
+            // إذا كان المفتاح موجوداً في .env ولكنه غير صالح، لا تظهر النافذة المنعجة بل سجل الخطأ
+            if (import.meta.env.VITE_GEMINI_API_KEY) {
+                console.error("المفتاح الموجود في .env غير صالح أو منتهي الصلاحية.");
+                return true; 
+            }
             clearApiKey();
             setIsModalOpen(true);
             return true;

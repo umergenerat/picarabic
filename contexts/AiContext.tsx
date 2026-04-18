@@ -24,6 +24,7 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     // محاولة قراءة المفتاح من ملف التكوين .env أولاً، ثم التخزين المحلي كبديل
     const envKey = import.meta.env.VITE_GEMINI_API_KEY;
     const [apiKey, _setApiKey] = useState<string | null>(envKey || localStorage.getItem('VITE_GEMINI_API_KEY'));
+    const apiKeyRef = useRef<string | null>(apiKey);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -34,6 +35,7 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     const setApiKey = useCallback((key: string) => {
         localStorage.setItem('VITE_GEMINI_API_KEY', key);
+        apiKeyRef.current = key;
         _setApiKey(key);
         setIsModalOpen(false);
         // Resolve all pending requests
@@ -43,20 +45,21 @@ export const AiProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     const clearApiKey = useCallback(() => {
         localStorage.removeItem('VITE_GEMINI_API_KEY');
+        apiKeyRef.current = null;
         _setApiKey(null);
     }, []);
 
     const openModal = useCallback(() => setIsModalOpen(true), []);
 
     const getApiKey = useCallback((): Promise<string> => {
-        if (apiKey) return Promise.resolve(apiKey);
+        if (apiKeyRef.current) return Promise.resolve(apiKeyRef.current);
 
         // If no key, show modal and return a promise
         return new Promise((resolve, reject) => {
             pendingRequests.current.push({ resolve, reject });
             setIsModalOpen(true);
         });
-    }, [apiKey]);
+    }, []);
 
     const closeModal = useCallback(() => {
         setIsModalOpen(false);

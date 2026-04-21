@@ -284,7 +284,7 @@ const App: React.FC = () => {
             case 'chat':
                 return withLoader(<ChatSection user={user} chatChannels={chatChannels} setChatChannels={setChatChannels} />, chatChannels.length > 0);
             case 'resources':
-                return user ? withLoader(<ResourcesSection resources={resources} />, resources.length > 0) : <LoginRequired onLogin={handleOpenLoginModal} />;
+                return user ? withLoader(<ResourcesSection resources={resources} texts={texts} skills={skills} specializations={specializations} />, resources.length >= 0) : <LoginRequired onLogin={handleOpenLoginModal} />;
             case 'dashboard':
                 return withLoader(<DashboardPage progressData={studentProgressData} />, studentProgressData.length > 0);
             case 'admin':
